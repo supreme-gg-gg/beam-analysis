@@ -1,7 +1,6 @@
 import streamlit as st
 from core import Rectangle, CrossSection
 
-# Initialize or retrieve the existing Geometry object from session_state
 def get_geometry():
     if "geometry" not in st.session_state:
         st.session_state.geometry = CrossSection()
@@ -15,9 +14,9 @@ def display_geometry_input():
     geometry = get_geometry()
 
     # Input fields to add a rectangle
-    width = st.number_input("Width (mm)", min_value=1, value=100, key="width_input")
-    height = st.number_input("Height (mm)", min_value=1, value=50, key="height_input")
-    position = st.number_input("Position (mm)", value=0, key="position_input")
+    width = st.number_input("Width (mm)", min_value=1.0, value=100.0, key="width_input")
+    height = st.number_input("Height (mm)", min_value=1.0, value=50.0, key="height_input")
+    position = st.number_input("Position from bottom (mm)", value=0.0, key="position_input")
 
     # Add Rectangle button
     if st.button("Add Rectangle"):
@@ -40,9 +39,13 @@ def display_geometry_input():
     st.subheader("Cross-Section Calculations")
     if geometry.rectangles:
         total_area = geometry.calculate_total_area()
-        centroid = geometry.calculate_centroid()
+        centroid_y = geometry.calculate_centroid()
+        moment_of_inertia = geometry.calculate_moment_of_inertia()
 
         st.write(f"Total Area: {total_area} mm²")
-        st.write(f"Centroid Position: {centroid} mm")
+        st.write(f"Centroid Position (Y): {centroid_y} mm")
+        st.write(f"Total Moment of Inertia: {moment_of_inertia} mm⁴")
     else:
         st.write("Add some rectangles to calculate the area and centroid.")
+
+    return geometry
