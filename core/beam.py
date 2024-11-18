@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 
-import config
+from config import *
 
 class Beam:
     def __init__(self, length, supports, loads, cross_section=None):
