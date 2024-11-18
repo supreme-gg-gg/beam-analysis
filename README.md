@@ -13,7 +13,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```sh
-streamlit run app/main.py
+streamlit run main.py
 ```
 
 ## TODO:

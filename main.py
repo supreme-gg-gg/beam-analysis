@@ -6,34 +6,43 @@ def main():
     # Title of the application
     st.title("Beam Analysis")
 
+    st.sidebar.title("Input Parameters")
     crossSection = display_geometry_input()
-
-    _, _, beam = get_user_inputs()
-
+    _ , _, beam = get_user_inputs()
     beam.cross_section = crossSection
 
-    if st.button("Perform Analysis"):
-        st.subheader("Train Load Information")
-        train_load = beam.Load
-        st.write(f"Total train weight: {train_load.total_weight} N")
-        st.write(f"Weight per wheel: {train_load.weight_per_wheel} N")
-        st.write(f"Wheel positions: {train_load.wheel_positions}")
-        st.write(f"Applied loads (position, load): {train_load.get_loads()}")
+    if st.sidebar.button("Perform Analysis"):
 
         st.subheader("Beam Analysis Results")
         st.write("Reaction forces:")
         st.write(beam.reaction_forces)
         beam.plot_sfd_bmd()
-        st.write("Maximum shear force: ", beam.max_shear_force)
-        st.write("Maximum bending moment: ", beam.max_bending_moment)
+        st.write("Maximum shear force: ", beam.max_shear_force_frame)
+        st.write("Maximum bending moment: ", beam.max_bending_moment_frame)
 
-        st.subheader("Cross-Section Information")
+        st.subheader("Stress and Shear Analysis")
         tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
 
         st.write(f"Maximum Tensile Stress: {round(tensile, 1)} N/mm^2")
         st.write(f"Maximum Compressive Stress: {round(compressive, 1)} N/mm^2")
+
+        st.subheader("Local Buckling Analysis")
+
+        st.subheader("FOS Analysis")
         st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 1)}")
         st.write(f"Factor of Safety (Top): {round(FOS_top, 1)}")
+
+    st.sidebar.subheader("SFE and BME") # this computationally expensive, don't do automatically!
+    direction = st.sidebar.radio("Select the direction of the train:", ("Left to Right", "Right to Left"))
+    if st.sidebar.button("Generate"):
+        st.subheader("Shear Force and Bending Moment Envelope")
+        st.write("Generating the envelope...")
+        if direction == "Left to Right":
+            beam.generate_sfe_bme(left=True)
+        else:
+            beam.generate_sfe_bme(left=False)
+        st.write("Envelope generated successfully.")
+        beam.plot_sfe_bme()
 
 if __name__ == "__main__":
     main()
