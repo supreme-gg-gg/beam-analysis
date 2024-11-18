@@ -3,12 +3,12 @@ from core import TrainLoad, Beam
 
 def get_beam_length():
     """Get the length of the beam from the user."""
-    length = st.number_input("Beam length (mm):", min_value=1.0, value=1250.0, step=10.0)
+    length = st.sidebar.number_input("Beam length (mm):", min_value=1.0, value=1200.0, step=10.0)
     return length
 
 def get_supports():
     """Get the locations of supports from the user."""
-    supports = st.text_input("Supports (comma separated, e.g., A, B):", value="A,B").split(",")
+    supports = st.sidebar.text_input("Supports (comma separated, e.g., A, B):", value="A,B").split(",")
     return supports
 
 def get_loads():
@@ -17,30 +17,30 @@ def get_loads():
         st.session_state.loads = []
 
     # Input for new load
-    load_position = st.number_input("Position of load (mm):", min_value=0.0, value=0.0, step=0.1)
-    load_magnitude = st.number_input("Magnitude of load (N):", min_value=0.0, value=0.0, step=1.0)
+    load_position = st.sidebar.number_input("Position of load (mm):", min_value=0.0, value=0.0, step=0.1)
+    load_magnitude = st.sidebar.number_input("Magnitude of load (N):", min_value=0.0, value=400.0, step=1.0)
     
     # Button to add the load to the list
-    if st.button("Add Load"):
+    if st.sidebar.button("Add Load"):
         st.session_state.loads.append((load_position, load_magnitude))
 
     # Display current loads
-    st.write("Current loads:")
+    st.sidebar.write("Current loads:")
     for idx, (position, magnitude) in enumerate(st.session_state.loads):
-        st.write(f"Load {idx + 1}: {magnitude} N at {position} m")
-        if st.button(f"Remove Load {idx + 1}", key=f"remove_{idx}"):
+        st.sidebar.write(f"Load {idx + 1}: {magnitude} N at {position} m")
+        if st.sidebar.button(f"Remove Load {idx + 1}", key=f"remove_{idx}"):
             st.session_state.loads.pop(idx)
 
     return st.session_state.loads
 
 def get_train_weight():
     """Get the total weight of the train from the user."""
-    total_weight = st.number_input("Total weight of the train (in N):", min_value=0.0, step=100.0, value=400.0)
+    total_weight = st.sidebar.number_input("Total weight of the train (in N):", min_value=0.0, step=100.0, value=400.0)
     return total_weight
 
 def get_train_position():
     """Get the current position of the train on the bridge (in meters)."""
-    train_position = st.number_input("Train position (in mm from the left end of the bridge):", min_value=-100.0, step=1.0, value=0.0)
+    train_position = st.sidebar.number_input("Train position (in mm from the left end of the bridge):", min_value=-100.0, step=1.0, value=0.0)
     return train_position
 
 def get_train_loads():
@@ -51,18 +51,14 @@ def get_train_loads():
     # Hardcoded wheel positions (in mm from the leftmost end)
     base_positions = [52, 176, 164, 176, 164, 176]
 
-    # Update wheel positions based on train position
-    wheel_positions = [sum(base_positions[:i+1]) + train_position for i in range(len(base_positions))]
-
     # Weight per wheel (assuming the total weight is distributed evenly across the 6 wheels)
     weight_per_wheel = round(total_weight / 6, 2)
 
-    return TrainLoad(total_weight=total_weight, weight_per_wheel=weight_per_wheel, wheel_positions=wheel_positions)
+    return TrainLoad(total_weight=total_weight, weight_per_wheel=weight_per_wheel, base_positions=base_positions, train_position=train_position)
 
 def get_user_inputs():
-
-    st.sidebar.title("Train Load Setup")
-    st.subheader("Beam and Load Information")
+    
+    st.sidebar.subheader("Beam and Load Information")
 
     length = get_beam_length()
     supports = get_supports()
