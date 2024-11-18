@@ -1,4 +1,3 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 
@@ -105,8 +104,8 @@ class Beam:
         stress_bottom = self.max_bending_moment * y_b / I
 
         # Calculate Factor of Safety (FOS)
-        FOS_top = config.COMPRESSIVE_STRENGTH / stress_top
-        FOS_bottom = config.TENSILE_STRENGTH / stress_bottom
+        FOS_top = COMPRESSIVE_STRENGTH / stress_top
+        FOS_bottom = TENSILE_STRENGTH / stress_bottom
 
         return stress_bottom, stress_top, FOS_bottom, FOS_top
 

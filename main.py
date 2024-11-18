@@ -1,11 +1,6 @@
-import sys
-import os
-# Add the root directory of the project to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import streamlit as st
-from inputs import get_user_inputs
-from studio import display_geometry_input
+from app.inputs import get_user_inputs
+from app.studio import display_geometry_input
 
 def main():
     # Title of the application
