@@ -2,12 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 
+import config
+
 class Beam:
-    def __init__(self, length, supports, loads):
+    def __init__(self, length, supports, loads, cross_section=None):
         self.length = length      # Total length of the beam
         self.supports = supports  # List of support locations (e.g., ['A', 'B'])
         self.Load = loads     # TrainLoad object
         self.loads = loads.get_loads()   # List of loads with (location, magnitude)
+        self.cross_section = cross_section  # CrossSection object
 
         # Calculate reaction forces based on applied loads and support locations
         self.reaction_forces = self.calculate_reactions()
@@ -58,7 +61,7 @@ class Beam:
                     bending_moment -= load_mag * (x - load_pos)  # Moment = Load * Distance from load
 
             # Add the bending moment to the list
-            bending_moments.append(round(bending_moment/1000,1))
+            bending_moments.append(round(bending_moment,1))
 
         return shear_forces, bending_moments
     
@@ -79,7 +82,7 @@ class Beam:
         ax2.plot(range(0, int(self.length) + 1), self.bending_moments, label='Bending Moment', color='r')
         ax2.set_title('Bending Moment Diagram')
         ax2.set_xlabel('Position along the beam (mm)')
-        ax2.set_ylabel('Bending Moment (Nm)')
+        ax2.set_ylabel('Bending Moment (Nmm)')
         ax2.grid(True)
         ax2.legend()
 
@@ -88,3 +91,22 @@ class Beam:
 
         # Display the plot using Streamlit
         st.pyplot(fig)
+
+    def calculate_max_stress(self):
+
+        if not self.cross_section:
+            st.warning("Please define a cross-section for the beam.")
+            return
+
+        I = self.cross_section.I
+        y_t, y_b = self.cross_section.get_max_y()
+
+        stress_top = self.max_bending_moment * y_t / I
+        stress_bottom = self.max_bending_moment * y_b / I
+
+        # Calculate Factor of Safety (FOS)
+        FOS_top = config.COMPRESSIVE_STRENGTH / stress_top
+        FOS_bottom = config.TENSILE_STRENGTH / stress_bottom
+
+        return stress_bottom, stress_top, FOS_bottom, FOS_top
+
