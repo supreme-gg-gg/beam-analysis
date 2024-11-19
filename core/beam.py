@@ -19,8 +19,8 @@ class Beam:
         self.max_bending_moment_frame = max(self.bending_moments)
         self.shear_forces_envelope = []
         self.bending_moments_envelope = []
-        self.max_shear_force = 0
-        self.max_bending_moment = 0
+        self.max_shear_force = None
+        self.max_bending_moment = None
 
     def calculate_reactions(self):
         # Total load (sum of all point loads)
@@ -105,14 +105,38 @@ class Beam:
         I = self.cross_section.I
         y_t, y_b = self.cross_section.get_max_y()
 
-        stress_top = self.max_bending_moment_frame * y_t / I
-        stress_bottom = self.max_bending_moment_frame * y_b / I
+        if self.max_bending_moment is not None:
 
-        # Calculate Factor of Safety (FOS)
-        FOS_top = COMPRESSIVE_STRENGTH / stress_top
-        FOS_bottom = TENSILE_STRENGTH / stress_bottom
+            # positive max moment
+            stress_c_1 = self.max_bending_moment[0][1] * y_t / I
+            stress_t_1 = self.max_bending_moment[0][1] * y_b / I
 
-        return stress_bottom, stress_top, FOS_bottom, FOS_top
+            # we flip these values because the bending moment is negative
+            # top is tensile and bottom is compressive
+            stress_t_2 = self.max_bending_moment[1][1] * y_t / I
+            stress_c_2 = self.max_bending_moment[1][1] * y_b / I
+
+            # Calculate Factor of Safety (FOS)
+            stress_t = max(abs(stress_t_1), abs(stress_t_2))
+            stress_c = max(abs(stress_c_1), abs(stress_c_2))
+        
+        else:
+            stress_c = self.max_bending_moment_frame * y_t / I
+            stress_t = self.max_bending_moment_frame * y_b / I
+
+        FOS_c = COMPRESSIVE_STRENGTH / stress_t
+        FOS_t = TENSILE_STRENGTH / stress_c
+
+        return stress_t, stress_c, FOS_t, FOS_c
+    
+    @staticmethod
+    def _find_extrema(data):
+        """Helper function to find max positive and min negative values with indices."""
+        max_pos = max(((idx - TRAIN_LENGTH, val) for idx, val in enumerate(data) if val > 0), default=(None, 0), key=lambda x: x[1])
+        min_neg = min(((idx - TRAIN_LENGTH, val) for idx, val in enumerate(data) if val < 0), default=(None, 0), key=lambda x: x[1])
+        
+        return max_pos, min_neg
+
     
     def generate_sfe_bme(self, left=True):
 
@@ -141,9 +165,14 @@ class Beam:
                 # Move train to the left incrementally
                 self.Load.update_load_positions(direction=-1)
 
-        self.max_shear_force = max(self.shear_forces_envelope, key=abs)
-        self.max_bending_moment = max(self.bending_moments_envelope, key=abs)
-        return self.max_shear_force, self.max_bending_moment
+        # Calculate shear force and bending moment extrema
+        max_positive_shear, max_negative_shear = self._find_extrema(self.shear_forces_envelope)
+        max_positive_bending, max_negative_bending = self._find_extrema(self.bending_moments_envelope)
+
+        self.max_shear_force = [max_positive_shear, max_negative_shear]
+        self.max_bending_moment = [max_positive_bending, max_negative_bending]
+
+        return max_positive_shear, max_negative_shear, max_positive_bending, max_negative_bending
     
     def plot_sfe_bme(self):
         # Calculate the x-axis range: train can extend from -train_length to bridge_length

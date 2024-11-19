@@ -1,13 +1,23 @@
 import streamlit as st
 from app.inputs import get_user_inputs
-from app.studio import display_geometry_input
+from app.studio import display_geometry_input, upload_geometry_file, save_geometry_to_file
 
 def main():
     # Title of the application
     st.title("Beam Analysis")
 
     st.sidebar.title("Input Parameters")
-    crossSection = display_geometry_input()
+    option = st.sidebar.selectbox("Choose input method:", ("Manual Input", "Upload File"))
+
+    if option == "Manual Input":
+        crossSection = display_geometry_input()
+    else:
+        crossSection = upload_geometry_file()
+
+    if st.sidebar.button("Save Geometry"):
+        save_geometry_to_file()
+        st.sidebar.success("Geometry saved successfully.")
+
     _ , _, beam = get_user_inputs()
     beam.cross_section = crossSection
 
@@ -38,11 +48,27 @@ def main():
         st.subheader("Shear Force and Bending Moment Envelope")
         st.write("Generating the envelope...")
         if direction == "Left to Right":
-            beam.generate_sfe_bme(left=True)
+            max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_sfe_bme(left=True)
+            
         else:
-            beam.generate_sfe_bme(left=False)
+            max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_sfe_bme(left=False)
+        st.table({
+                "Parameter": ["Maximum Positive Shear", "Maximum Negative Shear", 
+                              "Maximum Positive Moment", "Maximum Negative Moment"],
+                "Index": [max_positive_shear[0], max_negative_shear[0], 
+                          max_positive_moment[0], max_negative_monent[0]],
+                "Value": [max_positive_shear[1], max_negative_shear[1], 
+                          max_positive_moment[1], max_negative_monent[1]]
+            })
         st.write("Envelope generated successfully.")
         beam.plot_sfe_bme()
+
+        if st.sidebar.button("Stress Shear Analysis"):
+            tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
+            st.write(f"Maximum Tensile Stress: {round(tensile, 1)} N/mm^2")
+            st.write(f"Maximum Compressive Stress: {round(compressive, 1)} N/mm^2")
+            st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 1)}")
+            st.write(f"Factor of Safety (Top): {round(FOS_top, 1)}")
 
 if __name__ == "__main__":
     main()
