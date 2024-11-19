@@ -20,7 +20,6 @@ streamlit run main.py
 
 - Add shear analysis using Jarowski equation + shear FOS
 - Take into account the glue in shear analysis
-- Compute and plot the shear force and bending moment envelope
 - Think plate buckling analysis
 - Visualization of the failing moment and shear
 
