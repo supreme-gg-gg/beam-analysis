@@ -1,5 +1,6 @@
 import streamlit as st
 from core import Rectangle, CrossSection
+import json
 
 def get_geometry():
     if "geometry" not in st.session_state:
@@ -55,3 +56,41 @@ def display_geometry_input():
             st.write("Add some rectangles to calculate the area and centroid.")
 
     return geometry
+
+def upload_geometry_file():
+    uploaded_file = st.sidebar.file_uploader("Upload JSON file", type=["json"])
+    if uploaded_file is not None:
+        try:
+            data = json.load(uploaded_file)
+            geometry = get_geometry()
+            for rect_data in data:
+                width = rect_data.get("width")
+                height = rect_data.get("height")
+                position = rect_data.get("position")
+                if width and height and position is not None:
+                    new_rect = Rectangle(width=width, height=height, position=position)
+                    geometry.add_rectangle(new_rect)
+                else:
+                    st.sidebar.warning("Invalid rectangle data in JSON file.")
+            st.sidebar.success("Geometry loaded from file.")
+            return geometry
+        except json.JSONDecodeError:
+            st.sidebar.error("Error decoding JSON file.")
+    return None
+
+def save_geometry_to_file():
+    geometry = get_geometry()
+    if geometry.rectangles:
+        rect_data = [
+            {"width": rect.width, "height": rect.height, "position": rect.position}
+            for rect in geometry.rectangles
+        ]
+        json_data = json.dumps(rect_data, indent=4)
+        st.sidebar.download_button(
+            label="Download Geometry as JSON",
+            data=json_data,
+            file_name="geometry.json",
+            mime="application/json"
+        )
+    else:
+        st.sidebar.warning("No rectangles to save.")
