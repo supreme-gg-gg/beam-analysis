@@ -19,8 +19,8 @@ class Beam:
         self.max_bending_moment_frame = max(self.bending_moments)
         self.shear_forces_envelope = []
         self.bending_moments_envelope = []
-        self.max_shear_force = 0
-        self.max_bending_moment = 0
+        self.max_shear_force = 0 #max(self.shear_forces) # -------? #TODO:
+        self.max_bending_moment = 0 #max(self.bending_moments) # --------?#TODO:
 
     def calculate_reactions(self):
         # Total load (sum of all point loads)
@@ -185,18 +185,37 @@ class Beam:
         '''
         Calculate the maximum shear stress in the beam.
         '''
-        Q = 0
-        for rectangle in self.cross_section.rectangles:
-            Q += rectangle.area * abs(self.cross_section.centroid - rectangle.centroid)
-        shear = self.max_shear_force_frame * Q / (self.cross_section.I * THICKENSS)
 
-        return shear
+        V = self.max_shear_force_frame
+
+        I = self.cross_section.I
+
+        Q = 0
+
+        b = THICKNESS # thickness of flange
         
-    def calculate_shear_fos(self):
-        '''
-        Calculate the factor of safety against shear failure.
-        '''
-        pass
+        #Calculating Q Only With A
+        count = 0 # upto 2 (0, 1)
+        for rectangle in self.cross_section.rectangles:
+            if count == 0:
+                Q = rectangle.area * abs(self.cross_section.centroid - rectangle.centroid)
+            elif count == 1:
+                Q += ((rectangle.width * abs(self.cross_section.centroid - rectangle.position)) * 2) * abs(self.cross_section.centroid - rectangle.centroid)
+            else:
+                pass
+            count += 1
+
+        max_shear_stress = ( V * Q ) / (I * (b * 2))
+        
+        
+
+        # Calculating FOS
+
+        FOS_max_shear = SHEAR_STRENGTH / max_shear_stress
+
+
+        return max_shear_stress, FOS_max_shear
+    
 
     def calculate_buckling_stress(self):
         '''
