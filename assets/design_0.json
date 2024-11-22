@@ -1,48 +1,42 @@
 {
-    "rectangles": [
-        {
-            "width": 80.0,
-            "height": 1.27,
-            "position": 0.0
-        },
-        {
-            "width": 1.27,
-            "height": 75.0,
-            "position": 0.0
-        },
-        {
-            "width": 1.27,
-            "height": 75.0,
-            "position": 0.0
-        },
-        {
-            "width": 5.0,
-            "height": 1.27,
-            "position": 73.73
-        },
-        {
-            "width": 5.0,
-            "height": 1.27,
-            "position": 73.73
-        },
-        {
-            "width": 100.0,
-            "height": 1.27,
-            "position": 75.0
-        }
-    ],
-    "glue_connections": [
-        {
-            "rect1": 2,
-            "rect2": 0,
-            "direction": "horizontal",
-            "thickness": 1.0
-        },
-        {
-            "rect1": 2,
-            "rect2": 1,
-            "direction": "vertical",
-            "thickness": 1.0
-        }
-    ]
+  "rectangles": [
+    {
+      "width": 80.0,
+      "height": 1.27,
+      "position": 0.0
+    },
+    {
+      "width": 1.27,
+      "height": 75.0,
+      "position": 0.0
+    },
+    {
+      "width": 1.27,
+      "height": 75.0,
+      "position": 0.0
+    },
+    {
+      "width": 5.0,
+      "height": 1.27,
+      "position": 73.73
+    },
+    {
+      "width": 5.0,
+      "height": 1.27,
+      "position": 73.73
+    },
+    {
+      "width": 100.0,
+      "height": 1.27,
+      "position": 75.0
+    }
+  ],
+  "glue_connections": [
+    {
+      "rect1": 3,
+      "rect2": 5,
+      "direction": "horizontal",
+      "thickness": 10
+    }
+  ]
 }

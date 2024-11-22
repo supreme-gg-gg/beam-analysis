@@ -101,10 +101,8 @@ def get_glue_locations():
         st.table(glue_data)
     else:
         st.write("No glue connections available.")
-
-    if st.sidebar.button("Save Geometry"):
-        save_geometry_to_file()
-        st.sidebar.success("Geometry saved successfully.")
+    
+    save_geometry_to_file()
 
 def get_user_inputs():
     

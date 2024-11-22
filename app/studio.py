@@ -3,7 +3,6 @@ from core import Rectangle
 from app.common import get_geometry, save_geometry_to_file
 
 def display_geometry_input():
-    st.sidebar.subheader("Build the Cross-Section")
 
     geometry = get_geometry()
 
@@ -35,7 +34,5 @@ def display_geometry_input():
     elif render_build:
         st.warning("Add rectangles before rendering.")
 
-    if st.sidebar.button("Save Geometry"):
-        save_geometry_to_file()
-        st.sidebar.success("Geometry saved successfully.")
+    save_geometry_to_file()
 
