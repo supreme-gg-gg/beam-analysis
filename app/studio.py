@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
+# from streamlit_drawable_canvas import st_canvas
 from core import Rectangle, CrossSection
 import json
 
@@ -85,6 +85,7 @@ def save_geometry_to_file():
     else:
         st.sidebar.warning("No rectangles to save.")
 
+'''
 def draw_shape():
     st.sidebar.header("Draw and Modify Geometry")
 
@@ -144,3 +145,4 @@ def draw_shape():
     # Display the geometry
     st.subheader("Cross-Section Geometry")
     st.write(cross_section)
+'''

@@ -1,5 +1,5 @@
 import streamlit as st
-from app.studio import get_geometry
+from app.studio import get_geometry, save_geometry_to_file
 from core import TrainLoad, Beam
 
 def get_beam_length():
@@ -58,21 +58,20 @@ def get_train_loads():
     return TrainLoad(total_weight=total_weight, weight_per_wheel=weight_per_wheel, base_positions=base_positions, train_position=train_position)
 
 def get_glue_locations():
-    st.subheader("Select Glue Location")
-    
     cross_section = get_geometry()  # Use the existing function to get the geometry
     
     # Ensure the list of rectangles is populated before displaying the glue options
     if not cross_section.rectangles:
-        st.warning("No rectangles available. Please add some rectangles first.")
+        st.sidebar.warning("No rectangles available. Please add some rectangles first.")
         return
 
-    rect1_id = st.selectbox("Rectangle 1 ID", options=range(1, len(cross_section.rectangles) + 1))
-    rect2_id = st.selectbox("Rectangle 2 ID", options=range(1, len(cross_section.rectangles) + 1))
-    direction = st.radio("Glue Direction", options=["horizontal", "vertical"])
-    thickness = st.number_input("Glue Thickness (mm):", min_value=0.1, value=1.0, step=0.1)
+    rect1_id = st.sidebar.selectbox("Rectangle 1 ID", options=range(1, len(cross_section.rectangles) + 1))
+    rect2_id = st.sidebar.selectbox("Rectangle 2 ID", options=range(1, len(cross_section.rectangles) + 1))
+    direction = st.sidebar.radio("Glue Direction", options=["horizontal", "vertical"])
+    thickness = st.sidebar.number_input("Glue Thickness (mm):", min_value=0.1, value=1.0, step=0.1)
 
-    if st.button("Add Glue"):
+    st.subheader("Glue Connections")
+    if st.sidebar.button("Add Glue"):
         # Adjust to zero-based index for backend
         rect1_id -= 1
         rect2_id -= 1
@@ -81,13 +80,31 @@ def get_glue_locations():
         cross_section.add_glue_connection(rect1_id, rect2_id, direction, thickness)
         st.success(f"Glue added between R{rect1_id + 1} and R{rect2_id + 1} in {direction} direction with thickness {thickness}.")
 
-    # Display existing glue connections
+    # Display existing glue connections in a table view
     st.write("Existing Glue Connections:")
-    for connection in cross_section.glue_connections:
-        # Convert IDs to 1-based for display
-        rect1_id = connection['rect1'] + 1
-        rect2_id = connection['rect2'] + 1
-        st.write(f"R{rect1_id} ↔ R{rect2_id} ({connection['direction']})")
+    if cross_section.glue_connections:
+        glue_data = {
+            "Rectangle 1 ID": [],
+            "Rectangle 2 ID": [],
+            "Direction": [],
+            "Thickness (mm)": []
+        }
+        for connection in cross_section.glue_connections:
+            # Convert IDs to 1-based for display
+            rect1_id = connection['rect1'] + 1
+            rect2_id = connection['rect2'] + 1
+            glue_data["Rectangle 1 ID"].append(rect1_id)
+            glue_data["Rectangle 2 ID"].append(rect2_id)
+            glue_data["Direction"].append(connection['direction'])
+            glue_data["Thickness (mm)"].append(connection['thickness'])
+        
+        st.table(glue_data)
+    else:
+        st.write("No glue connections available.")
+
+    if st.sidebar.button("Save Geometry"):
+        save_geometry_to_file()
+        st.sidebar.success("Geometry saved successfully.")
 
 def get_user_inputs():
     
