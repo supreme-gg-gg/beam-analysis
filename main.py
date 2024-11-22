@@ -1,25 +1,28 @@
 import streamlit as st
-from app.inputs import get_user_inputs
-from app.studio import display_geometry_input, upload_geometry_file, save_geometry_to_file
+from app.inputs import get_user_inputs, get_glue_locations
+from app.studio import display_geometry_input, upload_geometry_file, save_geometry_to_file, get_geometry, draw_shape
 
 def main():
     # Title of the application
     st.title("Beam Analysis")
 
-    st.sidebar.title("Input Parameters")
+    st.sidebar.subheader("Build Cross Section")
     option = st.sidebar.selectbox("Choose input method:", ("Manual Input", "Upload File"))
 
     if option == "Manual Input":
-        crossSection = display_geometry_input()
+        display_geometry_input()
+        # draw_shape()
     else:
-        crossSection = upload_geometry_file()
+        upload_geometry_file()
 
     if st.sidebar.button("Save Geometry"):
         save_geometry_to_file()
         st.sidebar.success("Geometry saved successfully.")
+    
+    get_glue_locations()
 
     _ , _, beam = get_user_inputs()
-    beam.cross_section = crossSection
+    beam.cross_section = get_geometry()
 
     if st.sidebar.button("Perform Analysis"):
 
@@ -32,15 +35,24 @@ def main():
 
         st.subheader("Stress and Shear Analysis")
         tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
-
-        st.write(f"Maximum Tensile Stress: {round(tensile, 1)} N/mm^2")
-        st.write(f"Maximum Compressive Stress: {round(compressive, 1)} N/mm^2")
+        st.write(f"Maximum Tensile Stress: {round(tensile, 2)} N/mm^2")
+        st.write(f"Maximum Compressive Stress: {round(compressive, 2)} N/mm^2")
+        max_shear, FOS_shear = beam.calculate_shear_stress()
+        st.write(f"Maximum Shear Stress: {round(max_shear, 2)} N/mm^2")
+        beam.calculate_glue_shear()
+        for key, value in beam.shear_stress.items():
+            if "glue" in key:
+                st.write(f"Glue Location {key}: Shear Stress = {round(value, 2)} N/mm^2")
 
         st.subheader("Local Buckling Analysis")
 
         st.subheader("FOS Analysis")
-        st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 1)}")
-        st.write(f"Factor of Safety (Top): {round(FOS_top, 1)}")
+        st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 2)}")
+        st.write(f"Factor of Safety (Top): {round(FOS_top, 2)}")
+        st.write(f"Factor of Safety (Shear): {round(FOS_shear, 2)}")
+        FOS_glue = beam.calculate_glue_fos()
+        st.write(f"Factor of Safety (Glue): {round(FOS_glue, 2)}")
+        
 
     st.sidebar.subheader("SFE and BME") # this computationally expensive, don't do automatically!
     direction = st.sidebar.radio("Select the direction of the train:", ("Left to Right", "Right to Left"))
