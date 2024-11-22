@@ -1,6 +1,7 @@
 import streamlit as st
 from app.inputs import get_user_inputs, get_glue_locations
-from app.studio import display_geometry_input, upload_geometry_file, save_geometry_to_file, get_geometry, draw_shape
+from app.studio import display_geometry_input, get_geometry
+from app.common import get_geometry, upload_geometry_file, reset_geometry
 
 def main():
     # Title of the application
@@ -9,17 +10,21 @@ def main():
     st.sidebar.subheader("Build Cross Section")
     option = st.sidebar.selectbox("Choose input method:", ("Manual Input", "Upload File"))
 
+    if "mode" not in st.session_state:
+        st.session_state.mode = "Manual Input"
+    
+    if option != st.session_state.mode:
+        st.session_state.mode = option
+        reset_geometry()
+
     if option == "Manual Input":
         display_geometry_input()
         # draw_shape()
     else:
         upload_geometry_file()
-
-    if st.sidebar.button("Save Geometry"):
-        save_geometry_to_file()
-        st.sidebar.success("Geometry saved successfully.")
     
-    get_glue_locations()
+    if st.sidebar.subheader("Cofigure Glue Locations"):
+        get_glue_locations()
 
     _ , _, beam = get_user_inputs()
     beam.cross_section = get_geometry()
