@@ -258,14 +258,32 @@ class Beam:
 
         return max_shear_stress, FOS_shear
     
-    def calculate_glue_shear(self):
-        
+    @DeprecationWarning
+    def calculate_glue_shear_combined(self):
+        # Initialize a dictionary to store combined glue connections by (rect1, rect2, direction)
+        combined_connections = {}
+
+        # Iterate over the glue connections
         for connection in self.cross_section.glue_connections:
-            rect1_id = connection["rect1"]
-            rect2_id = connection["rect2"]
-            direction = connection["direction"]
-            thickness = connection["thickness"]
-            self.calculate_glue_shear_pair(rect1_id, rect2_id, direction, thickness)
+            # Sort the rectangles to ensure uniqueness of the pair (rect1, rect2)
+            rect_pair = tuple(sorted([connection["rect1"], connection["rect2"]]))
+            key = (rect_pair, connection["direction"])
+
+            # If the key exists, add the thickness to the existing value
+            if key in combined_connections:
+                combined_connections[key] += connection["thickness"]
+            else:
+                # If the key doesn't exist, initialize with the thickness
+                combined_connections[key] = connection["thickness"]
+
+        # After combining connections, process each unique pair
+        for ((rect1, rect2), direction), total_thickness in combined_connections.items():
+            # Call the method to calculate glue shear for the combined connections
+            self.calculate_glue_shear_pair(rect1, rect2, direction, total_thickness)
+    
+    def calculate_glue_shear(self):
+        for connection in self.cross_section.glue_connections:
+            self.calculate_glue_shear_pair(connection["rect1"], connection["rect2"], connection["direction"], connection["thickness"])
 
     def calculate_glue_shear_pair(self, rect1_id, rect2_id, direction, thickness):
         if rect1_id < 0 or rect1_id >= len(self.cross_section.rectangles) or \
@@ -274,35 +292,38 @@ class Beam:
 
         rect1 = self.cross_section.rectangles[rect1_id]
         rect2 = self.cross_section.rectangles[rect2_id]
+        
+        edge = None
 
-        # Ensure the rectangles share an edge in the specified direction
+        # Check if the rectangles intersect horizontally or vertically
         if direction == "horizontal":
-            if not (abs(rect1.position + rect1.height - rect2.position) < 1e-6 or
-                    abs(rect2.position + rect2.height - rect1.position) < 1e-6):
-                raise ValueError("Rectangles do not share a horizontal edge.")
-            b = min(rect1.width, rect2.width)  # Width of the glue interface (shared base)
+            if rect1.position == rect2.position + rect2.height:
+                edge = rect1.position
+            elif rect2.position == rect1.position + rect1.height:
+                edge = rect2.position
+            else:
+                raise ValueError("Rectangles do not intersect horizontally.")
         elif direction == "vertical":
-            if not (abs(rect1.position - rect2.position) < 1e-6):
-                raise ValueError("Rectangles do not share a vertical edge.")
-            b = min(rect1.height, rect2.height)  # Height of the glue interface (shared side)
-        else:
-            raise ValueError("Invalid direction. Use 'horizontal' or 'vertical'.")
+            # if not (rect1.position == rect2.position + rect2.width and rect2.position <= rect1.position + rect1.width):
+            #    raise ValueError("Rectangles do not intersect vertically.")
+            raise NotImplementedError("Vertical Glue has Not been Implemented")
 
-        # Adjust for glue thickness in the calculation
+        if edge is None: 
+            raise ValueError("No common edge")
+
         if thickness <= 0:
             raise ValueError("Glue thickness must be greater than zero.")
-
-        b = thickness  # Set the glue thickness as the effective width in the shear formula
 
         # Calculate Q (first moment of area above/below the glue line)
         Q = 0
         for rectangle in self.cross_section.rectangles:
-            if direction == "horizontal" and rectangle.position + rectangle.height <= rect1.position:
-                # Rectangle is below the glue line
-                Q += rectangle.area * abs(rectangle.centroid - rect1.position)
-            elif direction == "vertical" and rectangle.position + rectangle.width <= rect1.position:
-                # Rectangle is to the left of the glue line
-                Q += rectangle.area * abs(rectangle.centroid - rect1.position)
+            if direction == "horizontal" and \
+                ((self.cross_section.centroid < edge <= rectangle.position) or \
+                 (rectangle.position <= edge < self.cross_section.centroid)):
+                # Rectangle is above/below the glue line
+                Q += rectangle.area * abs(rectangle.centroid - self.cross_section.centroid)
+            elif direction == "vertical":
+                raise NotImplementedError("Vertical Glue has Not been Implemented")
 
         if self.max_shear_force is None:
             V = self.max_shear_force_frame
@@ -311,11 +332,7 @@ class Beam:
 
         # Shear stress calculation, adjusting for glue thickness (rthickness)
         I = self.cross_section.I  # Moment of inertia of the entire cross-section
-        if b == 0:
-            st.error("Width of the glue line (b) is zero. Check your geometry.")
-            glue_shear_stress = float('inf')
-        else:
-            glue_shear_stress = (V * Q) / (I * b)
+        glue_shear_stress = (V * Q) / (I * thickness)
 
         # Store shear stress for this glue pair
         self.shear_stress[f"glue_{rect1_id}_{rect2_id}_{direction}"] = glue_shear_stress
@@ -326,7 +343,7 @@ class Beam:
         FOS_glue = []
         for key, value in self.shear_stress.items():
             if "glue" in key:
-                FOS_glue.append(value / SHEAR_STRENGTH_GLUE)
+                FOS_glue.append(SHEAR_STRENGTH_GLUE / value)
         return min(FOS_glue)
 
     def calculate_buckling_stress(self):

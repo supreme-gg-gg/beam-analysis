@@ -18,10 +18,19 @@ streamlit run main.py
 
 ## TODO:
 
-- Add shear analysis using Jarowski equation + shear FOS
-- Take into account the glue in shear analysis
 - Think plate buckling analysis
 - Visualization of the failing moment and shear
 
-- Optional: GUI for cross-section selection
-- Optional: show the stress profile of the beam (constant)
+## Note on JSON
+
+When you are building and uploading the bridge cross section by a JSON file, note:
+
+1. We do not yet have horizontal coordinates implemented, so position refers to the height from bottom
+
+2. You must manually calculate all the height, width, position for now
+
+3. The glue refers to the glue between two labelled (ID) rectanlges
+
+4. You need to add up the glue thickness (d) if they are on the same level
+
+> Improvements might be made but it is unlikely to be done soon

@@ -8,22 +8,21 @@ def main():
     st.title("Beam Analysis")
 
     st.sidebar.subheader("Build Cross Section")
-    option = st.sidebar.selectbox("Choose input method:", ("Manual Input", "Upload File"))
+    option = st.sidebar.selectbox("Choose input method:", ("Upload File", "Manual Input Geometry", "Configure Glue"))
 
     if "mode" not in st.session_state:
-        st.session_state.mode = "Manual Input"
+        st.session_state.mode = "Manual Input Geometry"
     
     if option != st.session_state.mode:
         st.session_state.mode = option
         reset_geometry()
 
-    if option == "Manual Input":
+    if option == "Manual Input Geometry":
         display_geometry_input()
         # draw_shape()
-    else:
+    elif option == "Upload File":
         upload_geometry_file()
-    
-    if st.sidebar.subheader("Cofigure Glue Locations"):
+    else:
         get_glue_locations()
 
     _ , _, beam = get_user_inputs()
@@ -40,23 +39,31 @@ def main():
 
         st.subheader("Stress and Shear Analysis")
         tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
-        st.write(f"Maximum Tensile Stress: {round(tensile, 2)} N/mm^2")
-        st.write(f"Maximum Compressive Stress: {round(compressive, 2)} N/mm^2")
+        stress_data = {
+            "Type": ["Maximum Tensile Stress", "Maximum Compressive Stress", "Maximum Shear Stress"],
+            "Value (N/mm²)": [round(tensile, 2), round(compressive, 2), None]  # None for shear initially
+        }
         max_shear, FOS_shear = beam.calculate_shear_stress()
-        st.write(f"Maximum Shear Stress: {round(max_shear, 2)} N/mm^2")
+        stress_data["Value (N/mm²)"][2] = round(max_shear, 2)
         beam.calculate_glue_shear()
-        for key, value in beam.shear_stress.items():
-            if "glue" in key:
-                st.write(f"Glue Location {key}: Shear Stress = {round(value, 2)} N/mm^2")
+        max_glue_shear = max(value for key, value in beam.shear_stress.items() if "glue" in key)
+        stress_data["Type"].append("Maximum Glue Shear Stress")
+        stress_data["Value (N/mm²)"].append(round(max_glue_shear, 2))
+        st.table(stress_data)
 
         st.subheader("Local Buckling Analysis")
 
         st.subheader("FOS Analysis")
-        st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 2)}")
-        st.write(f"Factor of Safety (Top): {round(FOS_top, 2)}")
-        st.write(f"Factor of Safety (Shear): {round(FOS_shear, 2)}")
-        FOS_glue = beam.calculate_glue_fos()
-        st.write(f"Factor of Safety (Glue): {round(FOS_glue, 2)}")
+        fos_data = {
+            "Component": ["Bottom", "Top", "Shear", "Glue"],
+            "Factor of Safety": [
+            round(FOS_bottom, 2),
+            round(FOS_top, 2),
+            round(FOS_shear, 2),
+            round(beam.calculate_glue_fos(), 2)
+            ]
+        }
+        st.table(fos_data)
         
 
     st.sidebar.subheader("SFE and BME") # this computationally expensive, don't do automatically!
