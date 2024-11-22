@@ -19,6 +19,7 @@ class Beam:
         self.max_bending_moment_frame = max(self.bending_moments)
         self.shear_forces_envelope = []
         self.bending_moments_envelope = []
+        self.shear_stress = {}
         self.max_shear_force = None
         self.max_bending_moment = None
 
@@ -214,37 +215,119 @@ class Beam:
         '''
         Calculate the maximum shear stress in the beam.
         '''
-
-        V = self.max_shear_force_frame
+        
+        if self.max_shear_force is None:
+            V = self.max_shear_force_frame
+        else: 
+            V = max(abs(self.max_shear_force[0]), abs(self.max_shear_force[1]))
 
         I = self.cross_section.I
+        Q = 0  # First moment of area
+        b = 0  # Width at the centroidal axis
 
-        Q = 0
-
-        b = THICKNESS # thickness of flange
-        
-        #Calculating Q Only With A
-        count = 0 # upto 2 (0, 1)
         for rectangle in self.cross_section.rectangles:
-            if count == 0:
-                Q = rectangle.area * abs(self.cross_section.centroid - rectangle.centroid)
-            elif count == 1:
-                Q += ((rectangle.width * abs(self.cross_section.centroid - rectangle.position)) * 2) * abs(self.cross_section.centroid - rectangle.centroid)
-            else:
-                pass
-            count += 1
+            # Bottom position and top position of the rectangle
+            bottom = rectangle.position
+            top = rectangle.position + rectangle.height
 
-        max_shear_stress = ( V * Q ) / (I * (b * 2))
-        
-        
+            # Rectangle intersects the centroid
+            if bottom <= self.cross_section.centroid <= top: 
+                b += rectangle.width  # Add the rectangle's width to b
 
-        # Calculating FOS
+                # Area of the portion above/below the centroid
+                height_below = self.cross_section.centroid - bottom
+                area_below = height_below * rectangle.width
 
-        FOS_max_shear = SHEAR_STRENGTH / max_shear_stress
+                Q += area_below * abs(height_below/2 - self.cross_section.centroid)
 
+            elif top < self.cross_section.centroid:
+                # Rectangle is strictly below the centroid
+                Q += rectangle.area * abs(rectangle.centroid - self.cross_section.centroid)
 
-        return max_shear_stress, FOS_max_shear
+        # Ensure b is non-zero to avoid division errors
+        if b == 0:
+            st.error("Width at centroid (b) is zero. Check your geometry.")
+            max_shear_stress = float('inf')
+        else:
+            # Shear stress calculation
+            max_shear_stress = (V * Q) / (I * b)
+
+        FOS_shear = SHEAR_STRENGTH / max_shear_stress
+
+        self.shear_stress["centroid"] = max_shear_stress
+
+        return max_shear_stress, FOS_shear
     
+    def calculate_glue_shear(self):
+        
+        for connection in self.cross_section.glue_connections:
+            rect1_id = connection["rect1"]
+            rect2_id = connection["rect2"]
+            direction = connection["direction"]
+            thickness = connection["thickness"]
+            self.calculate_glue_shear_pair(rect1_id, rect2_id, direction, thickness)
+
+    def calculate_glue_shear_pair(self, rect1_id, rect2_id, direction, thickness):
+        if rect1_id < 0 or rect1_id >= len(self.cross_section.rectangles) or \
+        rect2_id < 0 or rect2_id >= len(self.cross_section.rectangles):
+            raise ValueError("Invalid rectangle IDs provided.")
+
+        rect1 = self.cross_section.rectangles[rect1_id]
+        rect2 = self.cross_section.rectangles[rect2_id]
+
+        # Ensure the rectangles share an edge in the specified direction
+        if direction == "horizontal":
+            if not (abs(rect1.position + rect1.height - rect2.position) < 1e-6 or
+                    abs(rect2.position + rect2.height - rect1.position) < 1e-6):
+                raise ValueError("Rectangles do not share a horizontal edge.")
+            b = min(rect1.width, rect2.width)  # Width of the glue interface (shared base)
+        elif direction == "vertical":
+            if not (abs(rect1.position - rect2.position) < 1e-6):
+                raise ValueError("Rectangles do not share a vertical edge.")
+            b = min(rect1.height, rect2.height)  # Height of the glue interface (shared side)
+        else:
+            raise ValueError("Invalid direction. Use 'horizontal' or 'vertical'.")
+
+        # Adjust for glue thickness in the calculation
+        if thickness <= 0:
+            raise ValueError("Glue thickness must be greater than zero.")
+
+        b = thickness  # Set the glue thickness as the effective width in the shear formula
+
+        # Calculate Q (first moment of area above/below the glue line)
+        Q = 0
+        for rectangle in self.cross_section.rectangles:
+            if direction == "horizontal" and rectangle.position + rectangle.height <= rect1.position:
+                # Rectangle is below the glue line
+                Q += rectangle.area * abs(rectangle.centroid - rect1.position)
+            elif direction == "vertical" and rectangle.position + rectangle.width <= rect1.position:
+                # Rectangle is to the left of the glue line
+                Q += rectangle.area * abs(rectangle.centroid - rect1.position)
+
+        if self.max_shear_force is None:
+            V = self.max_shear_force_frame
+        else: 
+            V = max(abs(self.max_shear_force[0]), abs(self.max_shear_force[1]))
+
+        # Shear stress calculation, adjusting for glue thickness (rthickness)
+        I = self.cross_section.I  # Moment of inertia of the entire cross-section
+        if b == 0:
+            st.error("Width of the glue line (b) is zero. Check your geometry.")
+            glue_shear_stress = float('inf')
+        else:
+            glue_shear_stress = (V * Q) / (I * b)
+
+        # Store shear stress for this glue pair
+        self.shear_stress[f"glue_{rect1_id}_{rect2_id}_{direction}"] = glue_shear_stress
+
+        return glue_shear_stress
+    
+    def calculate_glue_fos(self):
+        FOS_glue = []
+        for key, value in self.shear_stress.items():
+            if "glue" in key:
+                FOS_glue.append(value / SHEAR_STRENGTH_GLUE)
+        return min(FOS_glue)
 
     def calculate_buckling_stress(self):
         '''

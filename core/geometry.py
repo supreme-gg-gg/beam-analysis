@@ -23,6 +23,15 @@ class CrossSection:
         self.rectangles = []
         self.centroid = 0
         self.I = 0
+        self.glue_connections = []  # Store glue information
+
+    def add_glue_connection(self, rect1_id, rect2_id, direction, thickness):
+        self.glue_connections.append({
+            "rect1": rect1_id,
+            "rect2": rect2_id,
+            "direction": direction,
+            "thickness": thickness
+        })
 
     def add_rectangle(self, rectangle):
         self.rectangles.append(rectangle)
