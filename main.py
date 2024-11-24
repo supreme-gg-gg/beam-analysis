@@ -45,10 +45,14 @@ def main():
         }
         max_shear, FOS_shear = beam.calculate_shear_stress()
         stress_data["Value (N/mm²)"][2] = round(max_shear, 2)
-        beam.calculate_glue_shear()
-        max_glue_shear = max(value for key, value in beam.shear_stress.items() if "glue" in key)
-        stress_data["Type"].append("Maximum Glue Shear Stress")
-        stress_data["Value (N/mm²)"].append(round(max_glue_shear, 2))
+        if beam.cross_section.glue_connections:
+            beam.calculate_glue_shear()
+            max_glue_shear = max(value for key, value in beam.shear_stress.items() if "glue" in key)
+            stress_data["Type"].append("Maximum Glue Shear Stress")
+            stress_data["Value (N/mm²)"].append(round(max_glue_shear, 2))
+            FOS_glue = beam.calculate_glue_fos()
+        else:
+            FOS_glue = -1
         st.table(stress_data)
 
         st.subheader("Local Buckling Analysis")
@@ -60,7 +64,7 @@ def main():
             round(FOS_bottom, 2),
             round(FOS_top, 2),
             round(FOS_shear, 2),
-            round(beam.calculate_glue_fos(), 2)
+            round(FOS_glue or None, 2)
             ]
         }
         st.table(fos_data)

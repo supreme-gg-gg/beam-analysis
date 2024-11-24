@@ -1,0 +1,58 @@
+{
+  "rectangles": [
+    {
+      "width": 80.0,
+      "height": 1.27,
+      "position": 0.0
+    },
+    {
+      "width": 1.27,
+      "height": 72.46,
+      "position": 1.27
+    },
+    {
+      "width": 1.27,
+      "height": 72.46,
+      "position": 1.27
+    },
+    {
+      "width": 80.0,
+      "height": 1.27,
+      "position": 73.73
+    },
+    {
+      "width": 5.0,
+      "height": 73.73,
+      "position": 1.27
+    },
+    {
+      "width": 5.0,
+      "height": 73.73,
+      "position": 1.27
+    },
+    {
+      "width": 90.0,
+      "height": 1.27,
+      "position": 75
+    },
+    {
+      "width": 90.0,
+      "height": 1.27,
+      "position": 76.27
+    }
+  ],
+  "glue_connections": [
+    {
+      "rect1": 3,
+      "rect2": 6,
+      "direction": "horizontal",
+      "thickness": 10
+    },
+    {
+      "rect1": 6,
+      "rect2": 7,
+      "direction": "horizontal",
+      "thickness": 10
+    }
+  ]
+}
