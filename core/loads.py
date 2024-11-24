@@ -13,9 +13,9 @@ class TrainLoad:
         lower_bound = 0  # Set your lower bound here
         upper_bound = self.bridge_length  # Set your upper bound here
         loads = []
-        for position in self.wheel_positions:
+        for idx, position in enumerate(self.wheel_positions):
             if lower_bound <= position <= upper_bound:
-                loads.append((position, self.weight_per_wheel))
+                loads.append((position, self.weight_per_wheel[idx]))
             else:
                 loads.append((position, 0))
         return loads

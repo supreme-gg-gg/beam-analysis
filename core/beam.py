@@ -125,8 +125,8 @@ class Beam:
             stress_c = self.max_bending_moment_frame * y_t / I
             stress_t = self.max_bending_moment_frame * y_b / I
 
-        FOS_c = COMPRESSIVE_STRENGTH / stress_t
-        FOS_t = TENSILE_STRENGTH / stress_c
+        FOS_c = COMPRESSIVE_STRENGTH / stress_c
+        FOS_t = TENSILE_STRENGTH / stress_t
 
         return stress_t, stress_c, FOS_t, FOS_c
     
@@ -346,10 +346,7 @@ class Beam:
                 FOS_glue.append(SHEAR_STRENGTH_GLUE / value)
         return min(FOS_glue)
 
-    def calculate_buckling_stress(self):
-        '''
-        Calculate the maximum stress due to buckling.
-        '''
+    def calculate_local_buckling(self):
         pass
 
     def calculate_buckling_fos(self):

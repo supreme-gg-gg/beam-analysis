@@ -44,7 +44,7 @@ def get_train_position():
     train_position = st.sidebar.number_input("Train position (in mm from the left end of the bridge):", min_value=-100.0, step=1.0, value=0.0)
     return train_position
 
-def get_train_loads():
+def get_train_loads_1():
     """Calculate and return the positions and loads of the train wheels based on user input."""
     total_weight = get_train_weight()
     train_position = get_train_position()
@@ -53,7 +53,34 @@ def get_train_loads():
     base_positions = [52, 176, 164, 176, 164, 176]
 
     # Weight per wheel (assuming the total weight is distributed evenly across the 6 wheels)
-    weight_per_wheel = round(total_weight / 6, 2)
+    weight_per_wheel = [total_weight / 6] * 6
+
+    return TrainLoad(total_weight=total_weight, weight_per_wheel=weight_per_wheel, base_positions=base_positions, train_position=train_position)
+
+def get_train_loads_2(first_pass=False):
+
+    '''
+    This function calculates the weight per wheel for a train with a locomotive and two freight cars.
+    The weight of the locomotive is 1.35 times the weight of the freight car with the most load.
+    The weight of the freight car at the end is 10% more than the weight of the freight car with the least load.
+    Setting first_pass to True will set the two freight cars to have the same load.
+    '''
+
+    train_position = get_train_position()
+    total_weight = get_train_weight()
+
+    base_positions = [52, 176, 164, 176, 164, 176]
+
+    if first_pass:
+        freight_mid = total_weight / 3.35
+        freight_end = freight_mid
+    else:
+        freight_mid = total_weight / 3.45 # this is the freight car with the least load
+        freight_end = freight_mid * 1.1
+        
+    locomotive = freight_end * 1.35
+
+    weight_per_wheel = [freight_end/2, freight_end/2, freight_mid/2, freight_mid/2, locomotive/2, locomotive/2]
 
     return TrainLoad(total_weight=total_weight, weight_per_wheel=weight_per_wheel, base_positions=base_positions, train_position=train_position)
 
@@ -106,11 +133,23 @@ def get_glue_locations():
 
 def get_user_inputs():
     
-    st.sidebar.subheader("Beam and Load Information")
+    st.sidebar.subheader("Beam Information")
 
     length = get_beam_length()
     supports = get_supports()
-    train_load = get_train_loads()
+
+    st.sidebar.subheader("Train Load Information")
+
+    load_case = st.sidebar.selectbox("Select Load Case", options=["Case 1: evenly distributed", "Case 2: increasing load"])
+
+    if load_case == "Case 1: evenly distributed":
+        train_load = get_train_loads_1()
+    else:
+        first_pass = st.sidebar.radio("Select Pass Type", options=["First Pass", "Subsequent Pass"], index=0)
+        if first_pass == "First Pass":
+            train_load = get_train_loads_2(first_pass=True)
+        else:
+            train_load = get_train_loads_2()
 
     beam = Beam(length, supports, train_load)
     
