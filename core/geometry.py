@@ -228,7 +228,7 @@ class CrossSection:
         # Filter out rectangles not in the top compression region
         for rectangle in rectangles[:]:
             # Check if the rectangle is entirely in the tension region (below centroid)
-            if rectangle.centroid_y < self.centroid:
+            if rectangle.centroid < self.centroid:
                 rectangles.remove(rectangle)  # Remove tension region rectangles
 
             # Adjust partially overlapping rectangles
@@ -294,6 +294,7 @@ class CrossSection:
                 - FOS_buckling (dict): A dictionary with the factor of safety for each buckling case.
         """
         buckling_cases = self._analyse_buckling_cases()
+        print(buckling_cases)
         buckling_capacity = {
             "1": 0,  # Bounded on both sides
             "2": 0,  # Bounded on one side
@@ -312,12 +313,12 @@ class CrossSection:
                     raise ValueError("Invalid buckling case.")
 
         # Calculate the Factor of Safety (FOS) by dividing buckling capacities by constants
-        FOS_buckling = {case: buckling_capacity[case] / COMPRESSIVE_STRENGTH for case in buckling_capacity}
+        FOS_buckling = {case: COMPRESSIVE_STRENGTH / buckling_capacity[case] for case in buckling_capacity}
 
         # Shear buckling
         vertical_wall = max(self.rectangles, key=lambda rect: rect.height)
         buckling_capacity["4"] = self._calculate_buckling(5, t=vertical_wall.width, a=self.diaphragm_spacing, h=vertical_wall.height)
-        FOS_buckling["4"] = buckling_capacity["4"] / SHEAR_STRENGTH
+        FOS_buckling["4"] = SHEAR_STRENGTH / buckling_capacity["4"]
 
         self.buckling_capacity = buckling_capacity
         self.fos_buckling = FOS_buckling

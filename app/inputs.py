@@ -21,7 +21,6 @@ def get_loads():
     Returns:
         list: A list of tuples where each tuple contains the position (float) and magnitude (float) of a load.
     """
-    """Get the applied loads from the user."""
     if 'loads' not in st.session_state:
         st.session_state.loads = []
 
@@ -41,6 +40,11 @@ def get_loads():
             st.session_state.loads.pop(idx)
 
     return st.session_state.loads
+
+def get_number_of_diaphragms():
+    """Get the number of diaphragms from the user."""
+    num_diaphragms = st.sidebar.number_input("Number of diaphragms:", min_value=0, value=5, step=1)
+    return num_diaphragms
 
 def get_train_weight():
     """Get the total weight of the train from the user."""
@@ -192,6 +196,8 @@ def get_user_inputs():
     length = get_beam_length()
     supports = get_supports()
 
+    diaphgrams = get_number_of_diaphragms()
+
     st.sidebar.subheader("Train Load Information")
 
     load_case = st.sidebar.selectbox("Select Load Case", options=["Case 1: evenly distributed", "Case 2: increasing load"])
@@ -207,4 +213,4 @@ def get_user_inputs():
 
     beam = Beam(length, supports, train_load)
     
-    return length, supports, beam
+    return length, supports, beam, length/diaphgrams

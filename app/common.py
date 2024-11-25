@@ -71,10 +71,12 @@ def upload_geometry_file():
                 # Load Rectangles
                 if "rectangles" in data and data["rectangles"]:
                     for rect_data in data["rectangles"]:
+                        position_x = rect_data.get("position_x", None)
                         geometry.add_rectangle(Rectangle(
                             width=rect_data["width"],
                             height=rect_data["height"],
-                            position=rect_data["position"]
+                            position=rect_data["position"],
+                            position_x=position_x
                         ))
                     
                     # Load Glue Connections if they exist
@@ -90,11 +92,13 @@ def upload_geometry_file():
                     st.sidebar.success("Geometry and glue connections loaded.")
                     total_area = geometry.calculate_total_area()
                     centroid_y = geometry.calculate_centroid()
+                    centroid_x = geometry.calculate_centroid_x()
                     moment_of_inertia = geometry.calculate_moment_of_inertia()
 
                     st.subheader("Cross-Section Geometry")
                     st.write(f"Total Area: {total_area} mm²")
                     st.write(f"Centroid Position (Y): {centroid_y} mm")
+                    st.write(f"Centroid Position (X): {centroid_x} mm")
                     st.write(f"Total Moment of Inertia: {moment_of_inertia} mm⁴")
                 else:
                     st.sidebar.warning("No rectangles found in the uploaded file.")
@@ -120,7 +124,12 @@ def save_geometry_to_file():
     geometry = get_geometry()
     if geometry.rectangles or geometry.glue_connections:
         rect_data = [
-            {"width": rect.width, "height": rect.height, "position": rect.position}
+            {
+                "width": rect.width,
+                "height": rect.height,
+                "position": rect.position,
+                "position_x": rect.position_x if hasattr(rect, 'position_x') else None
+            }
             for rect in geometry.rectangles
         ]
         glue_data = [
