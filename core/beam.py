@@ -191,8 +191,10 @@ class Beam:
     @staticmethod
     def _find_extrema(data):
         """Helper function to find max positive and min negative values with indices."""
-        max_pos = max(((idx - TRAIN_LENGTH, val) for idx, val in enumerate(data) if val > 0), default=(None, 0), key=lambda x: x[1])
-        min_neg = min(((idx - TRAIN_LENGTH, val) for idx, val in enumerate(data) if val < 0), default=(None, 0), key=lambda x: x[1])
+        max_pos = max(((idx - TRAIN_LENGTH, val) 
+                       for idx, val in enumerate(data) if val > 0), default=(None, 0), key=lambda x: x[1])
+        min_neg = min(((idx - TRAIN_LENGTH, val) 
+                       for idx, val in enumerate(data) if val < 0), default=(None, 0), key=lambda x: x[1])
         
         return max_pos, min_neg
     
@@ -615,15 +617,3 @@ class Beam:
             if "glue" in key:
                 FOS_glue.append(SHEAR_STRENGTH_GLUE / value)
         return min(FOS_glue)
-
-    def calculate_local_buckling(self):
-        pass
-
-    def calculate_buckling_fos(self):
-        '''
-        Calculate the factor of safety against buckling failure.
-        '''
-        pass
-
-    
-
