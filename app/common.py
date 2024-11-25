@@ -3,14 +3,64 @@ import json
 from core import Rectangle, CrossSection
 
 def get_geometry():
+    """
+    Retrieve or initialize the geometry object in the session state.
+
+    This function checks if the "geometry" key exists in the Streamlit session state.
+    If it does not exist, it initializes it with a new CrossSection object.
+    It then returns the geometry object from the session state.
+
+    Returns:
+        CrossSection: The geometry object stored in the session state.
+    """
     if "geometry" not in st.session_state:
         st.session_state.geometry = CrossSection()
     return st.session_state.geometry
 
 def reset_geometry():
+    """
+    Resets the geometry in the Streamlit session state to a new instance of CrossSection.
+
+    This function sets the 'geometry' attribute of the Streamlit session state to a new 
+    instance of the CrossSection class, effectively resetting any previous geometry data.
+    """
     st.session_state.geometry = CrossSection()
 
 def upload_geometry_file():
+    """
+    Handles the upload and processing of a JSON file containing geometric data.
+    This function allows the user to upload a JSON file via a Streamlit sidebar file uploader.
+    It processes the file to extract rectangle and glue connection data, which are then used
+    to update the geometry object. The function also calculates and displays the total area,
+    centroid position, and moment of inertia of the cross-section geometry.
+    The JSON file should have the following structure:
+    {
+        "rectangles": [
+            {
+                "width": <float>,
+                "height": <float>,
+                "position": <tuple>
+            },
+            ...
+        ],
+        "glue_connections": [
+            {
+                "rect1": <int>,
+                "rect2": <int>,
+                "direction": <str>,
+                "thickness": <float>
+            },
+            ...
+        ]
+    }
+    Raises:
+        Exception: If there is an error loading or processing the JSON file.
+    Displays:
+        - Success message if the geometry and glue connections are loaded successfully.
+        - Warning message if no rectangles are found in the uploaded file.
+        - Error message if there is an issue with loading the file.
+        - Cross-section geometry details including total area, centroid position, and moment of inertia.
+    """
     uploaded_file = st.sidebar.file_uploader("Upload JSON file", type=["json"])
     if uploaded_file is not None:
         geometry = get_geometry()
@@ -52,6 +102,21 @@ def upload_geometry_file():
                 st.sidebar.error(f"Error loading file: {e}")
 
 def save_geometry_to_file():
+    """
+    Saves the current geometry to a JSON file and provides a download button in the Streamlit sidebar.
+    The function retrieves the current geometry, which includes rectangles and glue connections.
+    If there are any rectangles or glue connections, it converts them into a JSON format and 
+    provides a download button in the Streamlit sidebar for the user to download the JSON file.
+    If there are no rectangles or glue connections, it displays a warning message in the sidebar.
+    The JSON file contains:
+    - rectangles: A list of dictionaries, each containing the width, height, and position of a rectangle.
+    - glue_connections: A list of dictionaries, each containing the details of a glue connection 
+      (rect1, rect2, direction, and thickness).
+    Raises:
+        None
+    Returns:
+        None
+    """
     geometry = get_geometry()
     if geometry.rectangles or geometry.glue_connections:
         rect_data = [

@@ -1,16 +1,33 @@
 import streamlit as st
 from app.inputs import get_user_inputs, get_glue_locations
-from app.studio import display_geometry_input, get_geometry
+from app.studio import display_geometry_input
 from app.common import get_geometry, upload_geometry_file, reset_geometry
 
 def main():
+    """
+    Main function to run the Beam Analysis application using Streamlit.
+    The application allows users to:
+    - Build a cross section by either uploading a file, manually inputting geometry, 
+      or configuring glue.
+    - Perform beam analysis to calculate reaction forces, maximum shear force, 
+      maximum bending moment, maximum tensile stress, maximum compressive stress, 
+      maximum shear stress, and maximum glue shear stress.
+    - Display the results of the analysis including stress and shear analysis, 
+      local buckling analysis, and factor of safety (FOS) analysis.
+    - Generate Shear Force and Bending Moment Envelope (SFE and BME) based on 
+      the direction of the train.
+    The function handles user inputs, updates session state, and displays results 
+    using Streamlit components. Main functionalities are implemented in the 
+    imported functions from the `inputs`, `studio`, and `core` modules.
+    """
     # Title of the application
     st.title("Beam Analysis")
 
     st.sidebar.subheader("Build Cross Section")
-    option = st.sidebar.selectbox("Choose input method:", ("Upload File", "Manual Input Geometry", "Configure Glue"))
+    option = st.sidebar.selectbox( # this is a dropdown menu
+        "Choose input method:", ("Upload File", "Manual Input Geometry", "Configure Glue"))
 
-    if "mode" not in st.session_state:
+    if "mode" not in st.session_state: # store the mode in the session state
         st.session_state.mode = "Manual Input Geometry"
     
     if option != st.session_state.mode:
@@ -25,10 +42,10 @@ def main():
     else:
         get_glue_locations()
 
-    _ , _, beam = get_user_inputs()
+    _ , _, beam = get_user_inputs() # get the beam object
     beam.cross_section = get_geometry()
 
-    if st.sidebar.button("Perform Analysis"):
+    if st.sidebar.button("Perform Analysis"): # main analysis to get FOS
 
         st.subheader("Beam Analysis Results")
         st.write("Reaction forces:")
@@ -39,7 +56,7 @@ def main():
 
         st.subheader("Stress and Shear Analysis")
         tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
-        stress_data = {
+        stress_data = { # dictionary to store the stress data
             "Type": ["Maximum Tensile Stress", "Maximum Compressive Stress", "Maximum Shear Stress"],
             "Value (N/mm²)": [round(tensile, 2), round(compressive, 2), None]  # None for shear initially
         }
@@ -57,7 +74,7 @@ def main():
 
         st.subheader("Local Buckling Analysis")
 
-        st.subheader("FOS Analysis")
+        st.subheader("FOS Analysis") # show FOS in a table
         fos_data = {
             "Component": ["Bottom", "Top", "Shear", "Glue"],
             "Factor of Safety": [
@@ -98,7 +115,7 @@ def main():
         else:
             max_shear, min_shear, max_moment, min_moment = beam.generate_sfe_bme(left=False)
         
-        st.table({
+        st.table({ # show the results in a table
             "Parameter": ["Maximum Positive Shear", "Maximum Negative Shear", 
                             "Maximum Positive Moment", "Maximum Negative Moment"],
             "Index": [max_shear[0], min_shear[0], 

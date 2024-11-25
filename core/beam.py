@@ -6,38 +6,6 @@ from config import *
 class Beam:
     """
     A class to represent a beam and perform structural analysis.
-    Attributes:
-    -----------
-    length : float
-        Total length of the beam.
-    supports : list
-        List of support locations (e.g., ['A', 'B']).
-    Load : TrainLoad
-        TrainLoad object representing the loads on the beam.
-    loads : list
-        List of loads with (location, magnitude).
-    cross_section : CrossSection, optional
-        CrossSection object representing the cross-sectional properties of the beam.
-    reaction_forces : dict
-        Dictionary containing reaction forces at supports.
-    shear_forces : list
-        List of shear forces along the length of the beam.
-    bending_moments : list
-        List of bending moments along the length of the beam.
-    max_shear_force_frame : float
-        Maximum shear force in the beam.
-    max_bending_moment_frame : float
-        Maximum bending moment in the beam.
-    shear_forces_envelope : list
-        Envelope of shear forces for different loading conditions.
-    bending_moments_envelope : list
-        Envelope of bending moments for different loading conditions.
-    shear_stress : dict
-        Dictionary containing shear stress values at different points.
-    max_shear_force : list
-        Maximum positive and negative shear forces.
-    max_bending_moment : list
-        Maximum positive and negative bending moments.
     """
     def __init__(self, length, supports, loads, cross_section=None):
         self.length = length      # Total length of the beam
@@ -347,6 +315,20 @@ class Beam:
         )
     
     def generate_loading_characteristic(self, left=True):
+        """
+        Generates the loading characteristic of the beam by moving a train load across it.
+
+        Args:
+            left (bool): If True, the train starts from the left and moves to the right.
+                         If False, the train starts from the right and moves to the left.
+
+        Returns:
+            tuple: A tuple containing:
+                - max_positive_shear (float): The maximum positive shear force encountered.
+                - max_negative_shear (float): The maximum negative shear force encountered.
+                - max_positive_bending (float): The maximum positive bending moment encountered.
+                - max_negative_bending (float): The maximum negative bending moment encountered.
+        """
 
         # Move train to the extreme left
         if left:
@@ -383,6 +365,29 @@ class Beam:
         return max_positive_shear, max_negative_shear, max_positive_bending, max_negative_bending
     
     def plot_loading_characteristic(self):
+        """
+        Plots the loading characteristics of the beam, including the Shear Force Envelope (SFE) 
+        and Bending Moment Envelope (BME).
+
+        This method creates a figure with two subplots:
+        - The first subplot displays the Shear Force Envelope (SFE) along the beam.
+        - The second subplot displays the Bending Moment Envelope (BME) along the beam.
+
+        The x-axis represents the position along the beam, extending from -TRAIN_LENGTH to the 
+        length of the beam. The y-axis represents the shear force in Newtons (N) for the SFE 
+        and the bending moment in Newton-millimeters (Nmm) for the BME.
+
+        The method ensures that the envelope data matches the expected x-axis range. If the 
+        lengths do not match, an error message is displayed.
+
+        The plots include grid lines, zero-force/moment lines, and legends for clarity. The 
+        layout is adjusted with padding between the plots for better visualization.
+
+        The resulting figure is displayed using Streamlit.
+
+        Raises:
+            ValueError: If the length of the envelope data does not match the expected x-axis range.
+        """
         # Calculate the x-axis range: train can extend from -train_length to bridge_length
         x_range = list(range(-int(TRAIN_LENGTH), int(self.length) + 1))
 
@@ -419,10 +424,15 @@ class Beam:
         st.pyplot(fig)
     
     def calculate_shear_stress(self):
-        '''
-        Calculate the maximum shear stress in the beam.
-        '''
-        
+        """
+        This method computes the maximum shear stress at the centroid of the beam's cross-section
+        using the shear force, moment of inertia, and the first moment of area. It also calculates
+        the factor of safety (FOS) against shear failure.
+        Returns:
+            tuple: A tuple containing:
+                - max_shear_stress (float): The maximum shear stress at the centroid.
+                - FOS_shear (float): The factor of safety against shear failure.
+        """
         if self.max_shear_force is None:
             V = self.max_shear_force_frame
         else: 
@@ -467,6 +477,23 @@ class Beam:
     
     @DeprecationWarning
     def calculate_glue_shear_combined(self):
+        """
+        Calculate the combined glue shear for all glue connections in the cross-section.
+
+        This method iterates over the glue connections in the cross-section, combines
+        connections between the same pairs of rectangles in the same direction, and
+        then calculates the glue shear for each unique pair of rectangles.
+
+        The combined connections are stored in a dictionary with keys as tuples of
+        ((rect1, rect2), direction) and values as the total thickness of the glue
+        connections between those rectangles in that direction.
+
+        After combining the connections, the method calls `calculate_glue_shear_pair`
+        for each unique pair of rectangles to calculate the glue shear.
+
+        Returns:
+            None
+        """
         # Initialize a dictionary to store combined glue connections by (rect1, rect2, direction)
         combined_connections = {}
 
@@ -489,10 +516,34 @@ class Beam:
             self.calculate_glue_shear_pair(rect1, rect2, direction, total_thickness)
     
     def calculate_glue_shear(self):
+        """
+        Calculate the shear stress in the glue connections of the beam's cross section.
+
+        This method iterates over all glue connections in the cross section and calculates
+        the shear stress for each pair of connected rectangles.
+
+        Returns:
+            None
+        """
         for connection in self.cross_section.glue_connections:
             self.calculate_glue_shear_pair(connection["rect1"], connection["rect2"], connection["direction"], connection["thickness"])
 
     def calculate_glue_shear_pair(self, rect1_id, rect2_id, direction, thickness):
+        """
+        Calculate the shear stress in the glue line between two rectangles in a cross-section.
+        Parameters:
+        rect1_id (int): The ID of the first rectangle.
+        rect2_id (int): The ID of the second rectangle.
+        direction (str): The direction of the glue line ("horizontal" or "vertical").
+        thickness (float): The thickness of the glue line.
+        Returns:
+        float: The calculated shear stress in the glue line.
+        Raises:
+        ValueError: If the rectangle IDs are invalid, the rectangles do not intersect in the specified direction,
+                    the glue thickness is not greater than zero, or no common edge is found.
+        NotImplementedError: If the vertical glue calculation is not implemented because it is not used in our design
+        """
+        
         if rect1_id < 0 or rect1_id >= len(self.cross_section.rectangles) or \
         rect2_id < 0 or rect2_id >= len(self.cross_section.rectangles):
             raise ValueError("Invalid rectangle IDs provided.")
@@ -547,6 +598,18 @@ class Beam:
         return glue_shear_stress
     
     def calculate_glue_fos(self):
+        """
+        Calculate the factor of safety (FOS) for glue joints based on shear stress.
+
+        This method iterates through the shear stress values stored in the `shear_stress` dictionary
+        of the object, identifies the entries related to glue joints, and calculates the factor of 
+        safety for each glue joint by dividing the predefined shear strength of the glue 
+        (SHEAR_STRENGTH_GLUE) by the corresponding shear stress value. It returns the minimum factor 
+        of safety among all glue joints.
+
+        Returns:
+            float: The minimum factor of safety for the glue joints.
+        """
         FOS_glue = []
         for key, value in self.shear_stress.items():
             if "glue" in key:

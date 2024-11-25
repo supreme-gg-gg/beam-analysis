@@ -3,6 +3,26 @@ from core import Rectangle
 from app.common import get_geometry, save_geometry_to_file
 
 def display_geometry_input():
+    """
+    Displays the input fields for geometry parameters and handles the addition of rectangles 
+    and rendering of the build in the Streamlit sidebar.
+
+    The function provides input fields for width, height, and position of a rectangle. 
+    It also includes buttons to add the rectangle to the geometry and to render the build.
+
+    When the "Add Rectangle" button is pressed, the function validates the input and adds 
+    the rectangle to the geometry if the input is valid. It displays a success message if 
+    the rectangle is added successfully, otherwise it shows a warning message.
+
+    When the "Render Build" button is pressed, the function calculates and displays the 
+    total area, centroid position, and moment of inertia of the geometry if there are 
+    rectangles present. If no rectangles are present, it shows a warning message.
+
+    The function also saves the geometry to a file.
+
+    Raises:
+        ValueError: If the input values for width, height, or position are invalid.
+    """
 
     geometry = get_geometry()
 
