@@ -1,6 +1,6 @@
 # beam-analysis
 
-A tool for analyzing beam data. We use Streamlit for Python based web application.
+Web application-based tool for analyzing beam data using Streamlit, a Python-based web application framework. This tool allows users to input beam specifications, perform structural analysis, and visualize results interactively.
 
 ## Installation
 
@@ -16,21 +16,33 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
-## TODO:
+## Features
 
-- Think plate buckling analysis
-- Visualization of the failing moment and shear
+1. Customize your design: speicfy beam length, loading characteristic, and cross-sectional properties
+2. Build and save your cross section and glue joints as a JSON for future use
+3. Analyze the beam: calculate shear force, bending moment, flexural stress, shear stress
+4. Display FOS (Factor of Safety) for the beam and failure load
+5. Visualize the SF (Shear Force) and BM (Bending Moment) diagrams
+6. Visualize the SF (Shear Force) and BM (Bending Moment) envelopes for a live load
 
-## Note on JSON
+## Repository Structure
 
-When you are building and uploading the bridge cross section by a JSON file, note:
+The program is written in standard OOP (Object-Oriented Programming) style. The `core` module contains the main classes and functions for beam analysis, equivalent to backend services. The `app` module contains the Streamlit application components for input handling and output display, equivalent to frontend services.
 
-1. We do not yet have horizontal coordinates implemented, so position refers to the height from bottom
-
-2. You must manually calculate all the height, width, position for now
-
-3. The glue refers to the glue between two labelled (ID) rectanlges
-
-4. You need to add up the glue thickness (d) if they are on the same level
-
-> Improvements might be made but it is unlikely to be done soon
+```plaintext
+beam-analysis/
+├── main.py                # Main application file for Streamlit
+├── requirements.txt       # List of dependencies
+├── README.md              # Project documentation
+├── assets/                # Design assets (saved JSON files)
+├── app/                   # Functions to handle inputs and outputs
+│   ├── __init__.py        # Initialization file for the app module
+│   ├── common.py          # Common shared helper functions
+│   ├── inputs.py          # Input handling components for the app
+│   ├── studio.py          # Studio components for designing cross sections
+├── core/                  # Beam analysis module
+│   ├── __init__.py        # Initialization file for the core module
+│   ├── beam.py            # Beam class and major calculations
+│   ├── geometry.py        # Cross Section class and utilities
+│   └── load.py            # Train load class and utilities
+```

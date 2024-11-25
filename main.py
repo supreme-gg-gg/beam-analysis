@@ -42,8 +42,9 @@ def main():
     else:
         get_glue_locations()
 
-    _ , _, beam = get_user_inputs() # get the beam object
+    _ , _, beam, diaphragm_spacing = get_user_inputs() # get the beam object
     beam.cross_section = get_geometry()
+    beam.cross_section.diaphragm_spacing = diaphragm_spacing
 
     if st.sidebar.button("Perform Analysis"): # main analysis to get FOS
 
@@ -73,6 +74,13 @@ def main():
         st.table(stress_data)
 
         st.subheader("Local Buckling Analysis")
+        buckling_capacity, FOS = beam.cross_section.calculate_buckling_capacity()
+        buckling_data = {
+            "Buckling Case": ["Case 1", "Case 2", "Case 3", "Case 4"],
+            "Buckling Capacity (N/mm²)": [round(cap, 2) for cap in buckling_capacity.values()],
+            "Factor of Safety": [round(fos, 2) for fos in FOS.values()]
+        }
+        st.table(buckling_data)
 
         st.subheader("FOS Analysis") # show FOS in a table
         fos_data = {
