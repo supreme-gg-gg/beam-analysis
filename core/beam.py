@@ -4,6 +4,41 @@ import streamlit as st
 from config import *
 
 class Beam:
+    """
+    A class to represent a beam and perform structural analysis.
+    Attributes:
+    -----------
+    length : float
+        Total length of the beam.
+    supports : list
+        List of support locations (e.g., ['A', 'B']).
+    Load : TrainLoad
+        TrainLoad object representing the loads on the beam.
+    loads : list
+        List of loads with (location, magnitude).
+    cross_section : CrossSection, optional
+        CrossSection object representing the cross-sectional properties of the beam.
+    reaction_forces : dict
+        Dictionary containing reaction forces at supports.
+    shear_forces : list
+        List of shear forces along the length of the beam.
+    bending_moments : list
+        List of bending moments along the length of the beam.
+    max_shear_force_frame : float
+        Maximum shear force in the beam.
+    max_bending_moment_frame : float
+        Maximum bending moment in the beam.
+    shear_forces_envelope : list
+        Envelope of shear forces for different loading conditions.
+    bending_moments_envelope : list
+        Envelope of bending moments for different loading conditions.
+    shear_stress : dict
+        Dictionary containing shear stress values at different points.
+    max_shear_force : list
+        Maximum positive and negative shear forces.
+    max_bending_moment : list
+        Maximum positive and negative bending moments.
+    """
     def __init__(self, length, supports, loads, cross_section=None):
         self.length = length      # Total length of the beam
         self.supports = supports  # List of support locations (e.g., ['A', 'B'])
@@ -17,13 +52,27 @@ class Beam:
         self.shear_forces, self.bending_moments = self.calculate_sfd_bmd()
         self.max_shear_force_frame = max(self.shear_forces)
         self.max_bending_moment_frame = max(self.bending_moments)
-        self.shear_forces_envelope = []
+        self.shear_forces_max_envelope = []
+        self.shear_forces_min_envelope = []
         self.bending_moments_envelope = []
+        self.shear_forces_envelope = []
         self.shear_stress = {}
         self.max_shear_force = None
         self.max_bending_moment = None
 
     def calculate_reactions(self):
+        """
+        Calculate the reactions at supports A and B for a simply supported beam.
+
+        This method calculates the reactions at the supports of a simply supported beam
+        subjected to point loads. The beam is assumed to be horizontal and the loads
+        are applied vertically.
+
+        Returns:
+            dict: A dictionary with the reactions at supports A and B.
+                  The keys are 'A' and 'B', and the values are the reaction forces at
+                  these supports.
+        """
         # Total load (sum of all point loads)
         total_load = sum(load[1] for load in self.loads)
 
@@ -37,6 +86,18 @@ class Beam:
         return {'A': RA, 'B': RB}
 
     def calculate_sfd_bmd(self):
+        """
+        Calculate the Shear Force Diagram (SFD) and Bending Moment Diagram (BMD) for the beam.
+
+        This method computes the shear forces and bending moments at discrete points along the length of the beam.
+        It first calculates the reactions at the supports and then iterates over each point along the beam to determine
+        the shear force and bending moment at that point.
+
+        Returns:
+            tuple: A tuple containing two lists:
+                - shear_forces (list of float): The shear forces at each point along the beam.
+                - bending_moments (list of float): The bending moments at each point along the beam.
+        """
         # Initialize lists for shear force and bending moment
         shear_forces = []
         bending_moments = []
@@ -71,6 +132,23 @@ class Beam:
         return shear_forces, bending_moments
     
     def plot_sfd_bmd(self):
+        """
+        Plots the Shear Force Diagram (SFD) and Bending Moment Diagram (BMD) for the beam.
+
+        This method creates a figure with two subplots:
+        - The first subplot displays the Shear Force Diagram (SFD).
+        - The second subplot displays the Bending Moment Diagram (BMD).
+
+        The diagrams are plotted using the shear forces and bending moments calculated along the length of the beam.
+
+        The plots are displayed using Streamlit.
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
 
         # Create a figure with two subplots
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
@@ -98,6 +176,18 @@ class Beam:
         st.pyplot(fig)
 
     def calculate_max_stress(self):
+        """
+        Calculate the maximum tensile and compressive stress in the beam and their respective factors of safety (FOS).
+        This method calculates the maximum tensile and compressive stress in the beam based on the maximum bending moments
+        and the properties of the beam's cross-section. It also calculates the factors of safety for both tensile and 
+        compressive stresses.
+        Returns:
+            tuple: A tuple containing:
+                - stress_t (float): Maximum tensile stress in the beam.
+                - stress_c (float): Maximum compressive stress in the beam.
+                - FOS_t (float): Factor of safety for tensile stress.
+                - FOS_c (float): Factor of safety for compressive stress.
+        """
 
         if not self.cross_section:
             st.warning("Please define a cross-section for the beam.")
@@ -137,9 +227,126 @@ class Beam:
         min_neg = min(((idx - TRAIN_LENGTH, val) for idx, val in enumerate(data) if val < 0), default=(None, 0), key=lambda x: x[1])
         
         return max_pos, min_neg
-
     
     def generate_sfe_bme(self, left=True):
+        """
+        Generates and plots Shear Force and Bending Moment Diagrams for selected train positions,
+        along with envelopes for Shear Force and Bending Moment.
+
+        Parameters:
+        - left (bool): If True, move the train from left to right, otherwise from right to left.
+
+        Returns:
+        - tuple: Four tuples:
+            - (location, max_shear_value)
+            - (location, min_shear_value)
+            - (location, max_bending_value)
+            - (location, min_bending_value)
+        """
+        self.shear_forces_envelope = []
+        self.bending_moments_envelope = []
+
+        # Set the train's starting position
+        if left:
+            self.Load.set_train_left()
+        else:
+            self.Load.set_train_right()
+
+        all_positions = range(int(self.length + 1))  # Full beam positions
+        shear_force_plots = []
+        bending_moment_plots = []
+
+        # Store indices for only a few key plots
+        key_plot_indices = []
+        step_size = self.length // 3  # Divide into 3 parts: start, middle, end
+
+        while (left and self.Load.wheel_positions[0] <= self.length) or (not left and self.Load.wheel_positions[-1] >= 0):
+            # Update the loads for the current train position
+            self.loads = self.Load.get_loads()
+
+            # Calculate shear forces and bending moments
+            shear_forces, bending_moments = self.calculate_sfd_bmd()
+
+            # Update the envelopes
+            if not self.shear_forces_min_envelope or not self.shear_forces_max_envelope:
+                self.shear_forces_max_envelope = shear_forces
+                self.shear_forces_min_envelope = shear_forces
+                self.bending_moments_envelope = bending_moments
+            else:
+                self.shear_forces_max_envelope = [
+                    max(env, sf) for env, sf in zip(self.shear_forces_max_envelope, shear_forces)
+                ]
+                self.shear_forces_min_envelope = [
+                    min(env, sf) for env, sf in zip(self.shear_forces_min_envelope, shear_forces)
+                ]
+                self.bending_moments_envelope = [
+                    max(env, bm) for env, bm in zip(self.bending_moments_envelope, bending_moments)
+                ]
+
+            # Add results for key positions
+            current_index = self.Load.wheel_positions[0]
+            if len(key_plot_indices) < 3 and abs(current_index - (len(key_plot_indices) * step_size)) < 1:
+                shear_force_plots.append(shear_forces)
+                bending_moment_plots.append(bending_moments)
+                key_plot_indices.append(current_index)
+
+            # Move the train incrementally
+            if left:
+                self.Load.update_load_positions(direction=1)
+            else:
+                self.Load.update_load_positions(direction=-1)
+
+        # Find extrema with locations
+        max_shear_value = max(self.shear_forces_max_envelope)
+        min_shear_value = min(self.shear_forces_min_envelope)
+        max_shear_location = self.shear_forces_max_envelope.index(max_shear_value)
+        min_shear_location = self.shear_forces_min_envelope.index(min_shear_value)
+
+        max_bending_value = max(self.bending_moments_envelope, key=abs)
+        min_bending_value = min(self.bending_moments_envelope, key=abs)
+        max_bending_location = self.bending_moments_envelope.index(max_bending_value)
+        min_bending_location = self.bending_moments_envelope.index(min_bending_value)
+
+        # Plotting
+        fig, ax = plt.subplots(2, 1, figsize=(12, 8))
+
+        # Plot only selected SFD and BMD
+        for i, (sf, bm) in enumerate(zip(shear_force_plots, bending_moment_plots)):
+            ax[0].plot(all_positions, sf, label=f"Train Pos {key_plot_indices[i]}")
+            ax[1].plot(all_positions, bm, label=f"Train Pos {key_plot_indices[i]}")
+
+        # Plot the envelopes
+        ax[0].plot(all_positions, self.shear_forces_max_envelope, 'r-', linewidth=2, label="SF Envelope (Max)")
+        ax[0].plot(all_positions, self.shear_forces_min_envelope, 'r-', linewidth=2, label="SF Envelope (Min)")
+        ax[1].plot(all_positions, self.bending_moments_envelope, 'b-', linewidth=2, label="BM Envelope")
+
+        # Highlight extrema
+        ax[0].scatter([max_shear_location, min_shear_location],
+                    [max_shear_value, min_shear_value], color='red', zorder=5, label="SF Extrema")
+        ax[1].scatter([max_bending_location, min_bending_location],
+                    [max_bending_value, min_bending_value], color='blue', zorder=5, label="BM Extrema")
+
+        ax[0].set_xlabel("Beam Length")
+        ax[0].set_ylabel("Shear Force (SF)")
+        ax[0].legend()
+        ax[0].grid()
+
+        ax[1].set_xlabel("Beam Length")
+        ax[1].set_ylabel("Bending Moment (BM)")
+        ax[1].legend()
+        ax[1].grid()
+
+        plt.tight_layout()
+        st.pyplot(fig)
+
+        return (
+            (max_shear_location, max_shear_value),
+            (min_shear_location, min_shear_value),
+            (max_bending_location, max_bending_value),
+            (min_bending_location, min_bending_value),
+        )
+    
+    def generate_loading_characteristic(self, left=True):
 
         # Move train to the extreme left
         if left:
@@ -175,7 +382,7 @@ class Beam:
 
         return max_positive_shear, max_negative_shear, max_positive_bending, max_negative_bending
     
-    def plot_sfe_bme(self):
+    def plot_loading_characteristic(self):
         # Calculate the x-axis range: train can extend from -train_length to bridge_length
         x_range = list(range(-int(TRAIN_LENGTH), int(self.length) + 1))
 

@@ -75,28 +75,37 @@ def main():
     if st.sidebar.button("Generate"):
         st.subheader("Shear Force and Bending Moment Envelope")
         st.write("Generating the envelope...")
-        if direction == "Left to Right":
-            max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_sfe_bme(left=True)
-            
-        else:
-            max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_sfe_bme(left=False)
-        st.table({
-                "Parameter": ["Maximum Positive Shear", "Maximum Negative Shear", 
-                              "Maximum Positive Moment", "Maximum Negative Moment"],
-                "Index": [max_positive_shear[0], max_negative_shear[0], 
-                          max_positive_moment[0], max_negative_monent[0]],
-                "Value": [max_positive_shear[1], max_negative_shear[1], 
-                          max_positive_moment[1], max_negative_monent[1]]
-            })
-        st.write("Envelope generated successfully.")
-        beam.plot_sfe_bme()
 
-        if st.sidebar.button("Stress Shear Analysis"):
-            tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
-            st.write(f"Maximum Tensile Stress: {round(tensile, 1)} N/mm^2")
-            st.write(f"Maximum Compressive Stress: {round(compressive, 1)} N/mm^2")
-            st.write(f"Factor of Safety (Bottom): {round(FOS_bottom, 1)}")
-            st.write(f"Factor of Safety (Top): {round(FOS_top, 1)}")
+        # if direction == "Left to Right":
+        #     max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_loading_characteristic(left=True)
+            
+        # else:
+        #     max_positive_shear, max_negative_shear, max_positive_moment, max_negative_monent = beam.generate_loading_characteristic(left=False)
+        
+        # st.table({
+        #         "Parameter": ["Maximum Positive Shear", "Maximum Negative Shear", 
+        #                       "Maximum Positive Moment", "Maximum Negative Moment"],
+        #         "Index": [max_positive_shear[0], max_negative_shear[0], 
+        #                   max_positive_moment[0], max_negative_monent[0]],
+        #         "Value": [max_positive_shear[1], max_negative_shear[1], 
+        #                   max_positive_moment[1], max_negative_monent[1]]
+        #     })
+        # st.write("Envelope generated successfully.")
+        # beam.plot_loading_characteristic()
+
+        if direction == "Left to Right":
+            max_shear, min_shear, max_moment, min_moment = beam.generate_sfe_bme(left=True)
+        else:
+            max_shear, min_shear, max_moment, min_moment = beam.generate_sfe_bme(left=False)
+        
+        st.table({
+            "Parameter": ["Maximum Positive Shear", "Maximum Negative Shear", 
+                            "Maximum Positive Moment", "Maximum Negative Moment"],
+            "Index": [max_shear[0], min_shear[0], 
+                        max_moment[0], min_moment[0]],
+            "Value": [max_shear[1], min_shear[1], 
+                        max_moment[1], min_moment[1]]
+        })
 
 if __name__ == "__main__":
     main()
