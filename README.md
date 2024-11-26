@@ -1,8 +1,10 @@
 # beam-analysis
 
-Web application-based tool for analyzing beam data using Streamlit, a Python-based web application framework. This tool allows users to input beam specifications, perform structural analysis, and visualize results interactively. 
+Web application-based tool for analyzing beam data using Streamlit, a Python-based web application framework. This tool allows users to input beam specifications, perform structural analysis, and visualize results interactively.
 
 The implementation is based on the [engineering beam theory](https://en.wikipedia.org/wiki/Euler–Bernoulli_beam_theory) and [thin plate buckling theory](https://en.wikipedia.org/wiki/Buckling#Plate_buckling).
+
+![Sample SFE/BME generation](assets/demo.png)
 
 ## Installation
 
@@ -28,7 +30,7 @@ streamlit run main.py
 
 The application has a wide variety of features including:
 
-1. Customize your design: speicfy beam length, loading characteristic, and cross-sectional properties
+1. Customize your design: speicfy beam length, loading characteristic, and cross-sectional properties (JSON files are supported)
 2. Build and save your cross section and glue joints as a JSON for future use
 3. Analyze the beam: calculate shear force, bending moment, flexural stress, shear stress
 4. Calculate geometric properties such as first and second moment of area and analyse local buckling
@@ -36,6 +38,12 @@ The application has a wide variety of features including:
 6. Visualize the SF (Shear Force) and BM (Bending Moment) diagrams
 7. Visualize the SF (Shear Force) and BM (Bending Moment) envelopes for a live load
 8. Generate the failure capacitiy for different failure modes based on SFD and BMD
+
+## Interface
+
+The left sidebar is used for inputting beam specifications and cross-sectional properties. The right page is used for displaying the calculated results and visualizations. The main content area is used for displaying the beam design studio and the calculated results.
+
+![usage demo](assets/usage.png)
 
 ## Repository Structure
 
@@ -61,4 +69,4 @@ beam-analysis/
 
 ## Credits
 
-The program was developed by Jet Chiang (@supreme-gg-gg) for CIV102 course project at the University of Toronto, Engineering Science. Contribution requests should be directed to [my email](mailto:jetjiang.ez@gmail.com). The code is presented "as is", i.e. I am not responsible to deliver future maintenances. 
+The program was developed by Jet Chiang (@supreme-gg-gg) for CIV102 course project at the University of Toronto, Engineering Science. Contribution requests should be directed to [my email](mailto:jetjiang.ez@gmail.com). The code is presented "as is", i.e. I am not responsible to deliver future maintenances.
