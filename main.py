@@ -74,11 +74,11 @@ def main():
         st.table(stress_data)
 
         st.subheader("Local Buckling Analysis")
-        buckling_capacity, FOS = beam.cross_section.calculate_buckling_capacity(compressive, beam.shear_stress["centroid"])
+        buckling_capacity, FOS_buckling = beam.cross_section.calculate_buckling_capacity(compressive, beam.shear_stress["centroid"])
         buckling_data = {
             "Buckling Case": ["Case 1", "Case 2", "Case 3", "Case 4"],
             "Buckling Capacity (N/mm²)": [round(cap, 3) for cap in buckling_capacity.values()],
-            "Factor of Safety": [round(fos, 3) for fos in FOS.values()]
+            "Factor of Safety": [round(fos, 3) for fos in FOS_buckling.values()]
         }
         st.table(buckling_data)
 
@@ -93,6 +93,17 @@ def main():
             ]
         }
         st.table(fos_data)
+
+        st.subheader("Visualization of Failure Capacities")
+        FOS = {
+            "tensile": FOS_bottom,
+            "compressive": FOS_top,
+            "shear": FOS_shear,
+            "glue": FOS_glue,
+            "buckling_comp": min(FOS_buckling["1"], FOS_buckling["2"], FOS_buckling["3"]),
+            "buckling_shear": FOS_buckling["4"]
+        }
+        beam.calculate_and_plot_failure_capacities(FOS)
         
 
     st.sidebar.subheader("SFE and BME") # this computationally expensive, don't do automatically!

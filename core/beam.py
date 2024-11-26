@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import streamlit as st
+import numpy as np
 
 from config import *
 
@@ -27,6 +28,7 @@ class Beam:
         self.shear_stress = {}
         self.max_shear_force = None
         self.max_bending_moment = None
+        self.FOS = {}
 
     def calculate_reactions(self):
         """
@@ -156,35 +158,17 @@ class Beam:
                 - FOS_t (float): Factor of safety for tensile stress.
                 - FOS_c (float): Factor of safety for compressive stress.
         """
-
-        if not self.cross_section:
-            st.warning("Please define a cross-section for the beam.")
-            return
-
         I = self.cross_section.I
         y_t, y_b = self.cross_section.get_max_y()
 
-        if self.max_bending_moment is not None:
-
-            # positive max moment
-            stress_c_1 = self.max_bending_moment[0][1] * y_t / I
-            stress_t_1 = self.max_bending_moment[0][1] * y_b / I
-
-            # we flip these values because the bending moment is negative
-            # top is tensile and bottom is compressive
-            stress_t_2 = self.max_bending_moment[1][1] * y_t / I
-            stress_c_2 = self.max_bending_moment[1][1] * y_b / I
-
-            # Calculate Factor of Safety (FOS)
-            stress_t = max(abs(stress_t_1), abs(stress_t_2))
-            stress_c = max(abs(stress_c_1), abs(stress_c_2))
-        
-        else:
-            stress_c = self.max_bending_moment_frame * y_t / I
-            stress_t = self.max_bending_moment_frame * y_b / I
+        stress_c = self.max_bending_moment_frame * y_t / I
+        stress_t = self.max_bending_moment_frame * y_b / I
 
         FOS_c = COMPRESSIVE_STRENGTH / stress_c
         FOS_t = TENSILE_STRENGTH / stress_t
+
+        self.FOS["tensile"] = FOS_t
+        self.FOS["compressive"] = FOS_c
 
         return stress_t, stress_c, FOS_t, FOS_c
     
@@ -474,6 +458,7 @@ class Beam:
         FOS_shear = SHEAR_STRENGTH / max_shear_stress
 
         self.shear_stress["centroid"] = max_shear_stress
+        self.FOS["shear"] = FOS_shear
 
         return max_shear_stress, FOS_shear
     
@@ -616,4 +601,65 @@ class Beam:
         for key, value in self.shear_stress.items():
             if "glue" in key:
                 FOS_glue.append(SHEAR_STRENGTH_GLUE / value)
-        return min(FOS_glue)
+        self.FOS["glue"] = min(FOS_glue)
+        return self.FOS["glue"]
+
+    def calculate_and_plot_failure_capacities(self, FOS):
+        """
+        Calculate and plot the failure capacities for bending moments and shear forces along the beam.
+        Parameters:
+        -----------
+        FOS : dict
+            A dictionary containing the factors of safety for different failure modes. The keys should include:
+            - "tension": Factor of safety for tension failure in bending moments.
+            - "compression": Factor of safety for compression failure in bending moments.
+            - "buckling_comp": Factor of safety for buckling failure in compression bending moments.
+            - "shear": Factor of safety for shear failure in shear forces.
+            - "glue": Factor of safety for glue failure in shear forces.
+            - "buckling_shear": Factor of safety for buckling failure in shear forces.
+        Returns:
+        --------
+        None
+            This method does not return any value. It generates and displays a plot of the failure capacities.
+        """
+        
+        x_values = np.linspace(0, len(self.shear_forces), len(self.shear_forces))  # x-axis values (normalized positions)
+
+        # Calculate failure capacities for bending moments
+        M_fail_tens = FOS["tensile"] * np.array(self.bending_moments)
+        M_fail_comp = FOS["compressive"] * np.array(self.bending_moments)
+        M_fail_buck = FOS["buckling_comp"] * np.array(self.bending_moments)
+
+        # Calculate failure capacities for shear forces
+        V_fail_shear = FOS["shear"] * np.array(self.shear_forces)
+        V_fail_glue = FOS["glue"] * np.array(self.shear_forces)
+        V_fail_buck = FOS["buckling_shear"] * np.array(self.shear_forces)
+
+        # Two subplots for moment-related and shear-related capacities
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
+
+        # Plot moment-related capacities
+        ax1.plot(x_values, M_fail_tens, label="M_fail_tens(x)", linestyle="--", color="blue")
+        ax1.plot(x_values, M_fail_comp, label="M_fail_comp(x)", linestyle="--", color="orange")
+        ax1.plot(x_values, M_fail_buck, label="M_fail_buck_1(x)", linestyle="--", color="green")
+        ax1.set_title("Moment-Related Failure Capacities")
+        ax1.set_xlabel("Position along the beam (x)")
+        ax1.set_ylabel("Moment Capacity")
+        ax1.legend()
+        ax1.grid()
+
+        # Plot shear-related capacities
+        ax2.plot(x_values, V_fail_shear, label="V_fail_shear(x)", linestyle="-", color="red")
+        ax2.plot(x_values, V_fail_glue, label="V_fail_glue(x)", linestyle="-", color="purple")
+        ax2.plot(x_values, V_fail_buck, label="V_fail_buck(x)", linestyle="-", color="brown")
+        ax2.set_title("Shear-Related Failure Capacities")
+        ax2.set_xlabel("Position along the beam (x)")
+        ax2.set_ylabel("Shear Capacity")
+        ax2.legend()
+        ax2.grid()
+
+        # Adjust layout with padding between plots
+        plt.tight_layout(pad=3.0)
+
+        # Streamlit output
+        st.pyplot(fig)

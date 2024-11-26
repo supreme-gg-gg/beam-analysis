@@ -239,8 +239,6 @@ class CrossSection:
             elif rectangle.position_x > self.centroid_x:
                 rectangles.remove(rectangle)
 
-        print(rectangles)
-
         # Classify the remaining rectangles into buckling cases
         tmp = None
         for rectangle in rectangles:
@@ -300,7 +298,6 @@ class CrossSection:
             - FOS_buckling (dict): Factor of Safety (FOS) for each buckling case.
         """
         buckling_cases = self._analyse_buckling_cases()  # Analyze and classify buckling cases
-        print(buckling_cases)
         buckling_capacity = {
             "1": 0,  # Bounded on both sides
             "2": 0,  # Bounded on one side
