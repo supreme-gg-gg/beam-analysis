@@ -1,5 +1,6 @@
 from config import *
 import math
+import copy
 class Rectangle:
     def __init__(self, width, height, position, position_x=None):
         self.width = width
@@ -54,7 +55,7 @@ class Rectangle:
         return (self.width * self.height ** 3) / 12
 
     def __repr__(self):
-        return f"Rectangle(width={self.width}, height={self.height}, position={self.position})"
+        return f"Rectangle(width={self.width}, height={self.height}, position={self.position}, position_x={self.position_x})"
     
 class CrossSection:
     def __init__(self, diaphragm_spacing=0):
@@ -223,35 +224,46 @@ class CrossSection:
             "3": [],  # Unbounded
         }
         # Copy the list of rectangles to avoid modifying the original
-        rectangles = self.rectangles.copy()
+        rectangles = copy.deepcopy(self.rectangles)
 
         # Filter out rectangles not in the top compression region
         for rectangle in rectangles[:]:
-            # Check if the rectangle is entirely in the tension region (below centroid)
-            if rectangle.centroid < self.centroid:
-                rectangles.remove(rectangle)  # Remove tension region rectangles
-
             # Adjust partially overlapping rectangles
-            elif rectangle.position <= self.centroid <= (rectangle.position + rectangle.height):
+            if rectangle.position <= self.centroid <= (rectangle.position + rectangle.height):
                 overlap_height = rectangle.height - abs(self.centroid - rectangle.position)
                 rectangle.height = overlap_height  # Adjust rectangle height
                 rectangle.position = self.centroid  # Update starting position of rectangle
+            # Check if the rectangle is entirely in the tension region (below centroid)
+            elif rectangle.centroid < self.centroid:
+                rectangles.remove(rectangle)  # Remove tension region rectangles
+            elif rectangle.position_x > self.centroid_x:
+                rectangles.remove(rectangle)
+
+        print(rectangles)
 
         # Classify the remaining rectangles into buckling cases
+        tmp = None
         for rectangle in rectangles:
             # Case 1: Bounded on both sides
-            if rectangle.position_x > 0 and (rectangle.position_x + rectangle.width) < (self.centroid_x * 2):
-                buckling_cases["1"].append(rectangle)
+            if rectangle.position_x < self.centroid_x and rectangle.width > rectangle.height:
+                if not rectangle.position_x == 0: # skip the leftmost because it is also case 2
+                    tmp = rectangle.width
+                if len(buckling_cases["1"]) == 0:
+                    buckling_cases["1"].append(rectangle)
+                else:
+                    # Combine rectangles bounded on both sides
+                    buckling_cases["1"][0].height += rectangle.height
 
             # Case 2: Bounded on one side (left or right edge)
-            elif rectangle.position_x == 0 or (rectangle.position_x + rectangle.width) == (self.centroid_x * 2):
+            if rectangle.position_x == 0:
+                # adjust the width that is effective for case 2
+                rectangle.width = (rectangle.width - tmp) / 2 if tmp is not None else rectangle.width
                 buckling_cases["2"].append(rectangle)
 
             # Case 3: Not bounded (completely free)
-            else:
+            elif rectangle.position_x < self.centroid_x and rectangle.width < rectangle.height:
                 buckling_cases["3"].append(rectangle)
             
-
         return buckling_cases
     
     @staticmethod
@@ -269,56 +281,80 @@ class CrossSection:
         Raises:
         ValueError: If the input parameters do not match any of the expected cases.
         """
-        
         if b is not None: # this is case 1-3
-            return k * math.pi **2 * YOUNGS_MODULUS / (12 * (1 - POISSON_RATIO ** 2)) * (t / b) ** 2
+            return k * (math.pi **2) * YOUNGS_MODULUS / (12 * (1 - POISSON_RATIO)**2) * ((t / b) ** 2)
         elif a is not None and h is not None: # this is case 4
-            return k * math.pi **2 * YOUNGS_MODULUS / (12 * (1 - POISSON_RATIO ** 2)) * ((t / a) ** 2 + (t / h) ** 2)
+            return k * (math.pi **2) * YOUNGS_MODULUS / (12 * (1 - POISSON_RATIO)**2) * ((t / a) ** 2 + (t / h) ** 2)
         else:
             raise ValueError("Invalid input for buckling calculation.")
     
-    def calculate_buckling_capacity(self):
+    def calculate_buckling_capacity(self, sigma_top, tau_cent):
         """
-        Calculate the buckling capacity for different buckling cases and the factor of safety (FOS) for each case.
-
-        The method considers three main buckling cases:
-        1. Bounded on both sides
-        2. Bounded on one side
-        3. Unbounded
-
-        Additionally, it calculates the shear buckling capacity for a vertical wall.
-
+        Calculate the buckling capacity and factor of safety (FOS) for different buckling cases.
+        Parameters:
+        sigma_top (float): Compressive stress at the top of the section.
+        tau_cent (float): Shear stress at the centroid of the section.
         Returns:
-            tuple: A tuple containing:
-                - buckling_capacity (dict): A dictionary with buckling capacities for each case.
-                - FOS_buckling (dict): A dictionary with the factor of safety for each buckling case.
+        tuple: A tuple containing two dictionaries:
+            - buckling_capacity (dict): Maximum buckling capacity for each case.
+            - FOS_buckling (dict): Factor of Safety (FOS) for each buckling case.
         """
-        buckling_cases = self._analyse_buckling_cases()
+        buckling_cases = self._analyse_buckling_cases()  # Analyze and classify buckling cases
         print(buckling_cases)
         buckling_capacity = {
             "1": 0,  # Bounded on both sides
             "2": 0,  # Bounded on one side
             "3": 0,  # Unbounded
+            "4": 0,  # Shear buckling
         }
 
-        for case, rectangles in buckling_cases.items(): # Iterate over each buckling case
+        # Iterate over each buckling case
+        for case, rectangles in buckling_cases.items():
             for rectangle in rectangles:
-                if case == "1":
-                    buckling_capacity[case] = max(buckling_capacity[case], self._calculate_buckling(4, t=rectangle.height, b=rectangle.width) )
-                elif case == "2":
-                    buckling_capacity[case] = max(buckling_capacity[case], self._calculate_buckling(0.425, t=rectangle.height, b=rectangle.width) )
-                elif case == "3":
-                    buckling_capacity[case] = max(buckling_capacity[case], self._calculate_buckling(6, t=rectangle.width, b=rectangle.height))
+                # Ensure valid dimensions
+                if rectangle.width <= 0 or rectangle.height <= 0:
+                    continue  # Skip invalid rectangles
+                
+                # Calculate buckling capacities for cases 1-3
+                if case == "1":  # Bounded on both sides
+                    capacity = self._calculate_buckling(
+                        k=4, t=rectangle.height, b=rectangle.width
+                    )
+                elif case == "2":  # Bounded on one side
+                    capacity = self._calculate_buckling(
+                        k=0.425, t=rectangle.height, b=rectangle.width
+                    )
+                elif case == "3":  # Unbounded
+                    capacity = self._calculate_buckling(
+                        k=6, t=rectangle.width, b=rectangle.height
+                    )
                 else:
-                    raise ValueError("Invalid buckling case.")
+                    raise ValueError(f"Invalid buckling case: {case}")
+                
+                # Update the maximum capacity for the case
+                buckling_capacity[case] = max(buckling_capacity[case], capacity)
 
-        # Calculate the Factor of Safety (FOS) by dividing buckling capacities by constants
-        FOS_buckling = {case: COMPRESSIVE_STRENGTH / buckling_capacity[case] for case in buckling_capacity}
+        # Shear buckling capacity (Case 4)
+        try:
+            vertical_wall = max(
+                self.rectangles, key=lambda rect: rect.height if rect.height > 0 else 0
+            )
+            if vertical_wall.height > 0 and vertical_wall.width > 0:
+                buckling_capacity["4"] = self._calculate_buckling(
+                    k=5,
+                    t=vertical_wall.width,
+                    a=self.diaphragm_spacing,
+                    h=vertical_wall.height,
+                )
+        except ValueError:
+            # No valid rectangles found for shear buckling
+            buckling_capacity["4"] = 0
 
-        # Shear buckling
-        vertical_wall = max(self.rectangles, key=lambda rect: rect.height)
-        buckling_capacity["4"] = self._calculate_buckling(5, t=vertical_wall.width, a=self.diaphragm_spacing, h=vertical_wall.height)
-        FOS_buckling["4"] = SHEAR_STRENGTH / buckling_capacity["4"]
+        # Calculate Factor of Safety (FOS) for each case using compressive stress and shear stress at centroid
+        FOS_buckling = {
+            case: (buckling_capacity[case] / sigma_top if case != "4" else buckling_capacity[case] / tau_cent)
+            for case in buckling_capacity
+        }
 
         self.buckling_capacity = buckling_capacity
         self.fos_buckling = FOS_buckling

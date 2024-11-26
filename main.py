@@ -59,26 +59,26 @@ def main():
         tensile, compressive, FOS_bottom, FOS_top = beam.calculate_max_stress()
         stress_data = { # dictionary to store the stress data
             "Type": ["Maximum Tensile Stress", "Maximum Compressive Stress", "Maximum Shear Stress"],
-            "Value (N/mm²)": [round(tensile, 2), round(compressive, 2), None]  # None for shear initially
+            "Value (N/mm²)": [round(tensile, 3), round(compressive, 3), None]  # None for shear initially
         }
         max_shear, FOS_shear = beam.calculate_shear_stress()
-        stress_data["Value (N/mm²)"][2] = round(max_shear, 2)
+        stress_data["Value (N/mm²)"][2] = round(max_shear, 3)
         if beam.cross_section.glue_connections:
             beam.calculate_glue_shear()
             max_glue_shear = max(value for key, value in beam.shear_stress.items() if "glue" in key)
             stress_data["Type"].append("Maximum Glue Shear Stress")
-            stress_data["Value (N/mm²)"].append(round(max_glue_shear, 2))
+            stress_data["Value (N/mm²)"].append(round(max_glue_shear, 3))
             FOS_glue = beam.calculate_glue_fos()
         else:
             FOS_glue = -1
         st.table(stress_data)
 
         st.subheader("Local Buckling Analysis")
-        buckling_capacity, FOS = beam.cross_section.calculate_buckling_capacity()
+        buckling_capacity, FOS = beam.cross_section.calculate_buckling_capacity(compressive, beam.shear_stress["centroid"])
         buckling_data = {
             "Buckling Case": ["Case 1", "Case 2", "Case 3", "Case 4"],
-            "Buckling Capacity (N/mm²)": [round(cap, 2) for cap in buckling_capacity.values()],
-            "Factor of Safety": [round(fos, 2) for fos in FOS.values()]
+            "Buckling Capacity (N/mm²)": [round(cap, 3) for cap in buckling_capacity.values()],
+            "Factor of Safety": [round(fos, 3) for fos in FOS.values()]
         }
         st.table(buckling_data)
 
@@ -86,10 +86,10 @@ def main():
         fos_data = {
             "Component": ["Bottom", "Top", "Shear", "Glue"],
             "Factor of Safety": [
-            round(FOS_bottom, 2),
-            round(FOS_top, 2),
-            round(FOS_shear, 2),
-            round(FOS_glue or None, 2)
+            round(FOS_bottom, 3),
+            round(FOS_top, 3),
+            round(FOS_shear, 3),
+            round(FOS_glue or None, 3)
             ]
         }
         st.table(fos_data)
