@@ -1,27 +1,27 @@
 {
   "rectangles": [
     {
-      "width": 100.0,
-      "height": 1.27,
-      "position": 0
-    },
-    {
       "width": 80.0,
       "height": 1.27,
-      "position": 1.27
+      "position": 0.0
     },
     {
       "width": 1.27,
       "height": 97.0,
-      "position": 1.27
+      "position": 0.0
     },
     {
       "width": 1.27,
       "height": 97.0,
-      "position": 1.27
+      "position": 0.0
     },
     {
       "width": 80,
+      "height": 1.27,
+      "position": 95.73
+    },
+    {
+      "width": 100.0,
       "height": 1.27,
       "position": 97
     },
@@ -33,16 +33,10 @@
   ],
   "glue_connections": [
     {
-      "rect1": 0,
-      "rect2": 1,
+      "rect1": 3,
+      "rect2": 4,
       "direction": "horizontal",
-      "thickness": 10
-    },
-    {
-      "rect1": 4,
-      "rect2": 5,
-      "direction": "horizontal",
-      "thickness": 10
+      "thickness": 80
     }
   ]
 }
